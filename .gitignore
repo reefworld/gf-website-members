@@ -9,7 +9,8 @@ wp-content/*
 !wp-content/themes/
 
 # ignore these plugins
-wp-content/plugins/hello.php
+wp-content/plugins/*
+!wp-content/plugins/rwf-gf-members-api
 
 # ignore specific themes
 wp-content/themes/twenty*/
