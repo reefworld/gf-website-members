@@ -2,7 +2,7 @@
 /*
 Plugin Name: Display Green Fins member info from Portal API
 Plugin URI: https://reef-world.org
-Description: Display Green Fins member information within pages and posts using shortcodes (cached using WP transients) from the Portal API
+Description: Display Green Fins member information within pages and posts using shortcodes (cached using WP transients) from the Members API
 Version: 1.0
 Author: James Greenhalgh
 Author URI: https://www.instagram.com/jamesgreenblue/
@@ -23,8 +23,8 @@ function list_top10members_func() {
    if ( false === $top10members ) {
        // Transient expired, refresh the data
 
-       $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-       $url = 'https://portal-dev.greenfins.net/api/v1/top-10-members?key=' . $key;
+       $key = get_option('rwf_api_key');
+       $url = get_option('rwf_api_endpoint') . '/top-10-members?key=' . $key;
        $data = wp_remote_get($url);
        $response = wp_remote_retrieve_body($data);
        $json = json_decode($response, true);
@@ -98,8 +98,8 @@ function list_top5bycountry_func( $atts = [] ) {
    if ( false === $countries ) {
        // Transient expired, refresh the data
 
-       $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-       $url = 'https://portal-dev.greenfins.net/api/v1/countries?key=' . $key;
+       $key = get_option('rwf_api_key');
+       $url = get_option('rwf_api_endpoint') . '/countries?key=' . $key;
        $data = wp_remote_get($url);
        $response = wp_remote_retrieve_body($data);
        $json = json_decode($response, true);
@@ -141,8 +141,8 @@ LIST;
    if ( false === $top5bycountry ) {
        // Transient expired, refresh the data
 
-       $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-       $url = 'https://portal-dev.greenfins.net/api/v1/countries/' . $countryid . '/top-5-members?key=' . $key;
+       $key = get_option('rwf_api_key');
+       $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/top-5-members?key=' . $key;
        $data = wp_remote_get($url);
        $response = wp_remote_retrieve_body($data);
        $json = json_decode($response, true);
@@ -217,8 +217,8 @@ function list_membersbylocation_func( $atts = [] ) {
       if ( false === $countries ) {
          // Transient expired, refresh the data
 
-         $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-         $url = 'https://portal-dev.greenfins.net/api/v1/countries?key=' . $key;
+         $key = get_option('rwf_api_key');
+         $url = get_option('rwf_api_endpoint') . '/countries?key=' . $key;
          $data = wp_remote_get($url);
          $response = wp_remote_retrieve_body($data);
          $json = json_decode($response, true);
@@ -261,8 +261,8 @@ LIST;
       if ( false === $regionsbycountry ) {
          // Transient expired, refresh the data
 
-         $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-         $url = 'https://portal-dev.greenfins.net/api/v1/countries/' . $countryid . '/regions?key=' . $key;
+         $key = get_option('rwf_api_key');
+         $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/regions?key=' . $key;
          $data = wp_remote_get($url);
          $response = wp_remote_retrieve_body($data);
          $json = json_decode($response, true);
@@ -288,8 +288,8 @@ LIST;
          if ( false === $locationsbyregion ) {
             // Transient expired, refresh the data
    
-            $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-            $url = 'https://portal-dev.greenfins.net/api/v1/regions/' . $region['id'] . '/locations?key=' . $key;
+            $key = get_option('rwf_api_key');
+            $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . $key;
             $data = wp_remote_get($url);
             $response = wp_remote_retrieve_body($data);
             $json = json_decode($response, true);
@@ -339,8 +339,8 @@ LIST;
       if ( false === $membersbylocation ) {
          // Transient expired, refresh the data
 
-         $key = 'iQZ35gareSKwo9YfHVJyvpXPhE8LA7';
-         $url = 'https://portal-dev.greenfins.net/api/v1/locations/' . $locationid . '/members?key=' . $key;
+         $key = get_option('rwf_api_key');
+         $url = get_option('rwf_api_endpoint') . '/locations/' . $locationid . '/members?key=' . $key;
          $data = wp_remote_get($url);
          $response = wp_remote_retrieve_body($data);
          $json = json_decode($response, true);
@@ -402,6 +402,13 @@ LISTING;
 
 }
 
+
+
+
+
+
+
+
 /**
  * Central location to create all shortcodes.
  */
@@ -409,8 +416,113 @@ function rwf_shortcodes_init() {
    add_shortcode( "list_top10members", "list_top10members_func" );
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
+   /* add_shortcode( "populate_centres", "populate_centres_func" ); */
+}
+add_action( 'init', 'rwf_shortcodes_init' );
+
+
+/**
+ * Admin menu for the API key and endpoint management
+ */
+add_action( "admin_menu", "rwf_gf_members_api_plugin_menu_func" );
+function rwf_gf_members_api_plugin_menu_func() {
+   add_submenu_page( "options-general.php",  // Which menu parent
+                  "Green Fins Members API Plugin Settings",            // Page title
+                  "Green Fins Members API",            // Menu title
+                  "manage_options",       // Minimum capability (manage_options is an easy way to target administrators)
+                  "rwf_gf_members_api_plugin",            // Menu slug
+                  "rwf_gf_members_api_plugin_options"     // Callback that prints the markup
+               );
 }
 
-add_action( 'init', 'rwf_shortcodes_init' );
+// Print the markup for the page
+function rwf_gf_members_api_plugin_options() {
+   if ( !current_user_can( "manage_options" ) )  {
+      wp_die( __( "You do not have sufficient permissions to access this page." ) );
+   }
+
+   if ( isset($_GET['status']) && $_GET['status']=='success') { 
+      ?>
+         <div id="message" class="updated notice is-dismissible">
+            <p><?php _e("Settings updated!", "rwf-gf-members-api"); ?></p>
+            <button type="button" class="notice-dismiss">
+               <span class="screen-reader-text"><?php _e("Dismiss this notice.", "rwf-gf-members-api"); ?></span>
+            </button>
+         </div>
+      <?php
+   }
+
+   ?>
+   <form method="post" action="<?php echo admin_url( 'admin-post.php'); ?>">
+
+      <input type="hidden" name="action" value="update_rwf_gf_members_api_plugin_settings" />
+
+      <h3><?php _e("Green Fins Members API Plugin Settings", "rwf-gf-members-api"); ?></h3>
+
+      <p>
+         This plugin displays Green Fins member information on pages and posts using shortcodes from the Members API (cached for 4 hours using WP transients).
+      </p>
+      <p>
+         <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
+      </p>
+      <p>
+         Available shortcodes:
+         <ul>
+            <li><code>[list_top10members]</code></li>
+            <li><code>[list_top5bycountry country=""]</code></li>
+            <li><code>[list_membersbylocation country="" location=""]</code></li>
+            <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code></li>
+         </ul>
+      </p>
+
+      <table class="form-table" role="presentation">
+         <tr>
+            <th scope="row"><label>
+               <?php _e("API Endpoint:", "rwf-gf-members-api"); ?></label>
+            </th>
+            <td>
+               <input class="" type="text" name="rwf_api_endpoint" value="<?php echo get_option('rwf_api_endpoint'); ?>" />
+            </td>
+         </tr>
+
+         <tr>
+            <th scope="row"><label>
+               <label><?php _e("API Key:", "rwf-gf-members-api"); ?></label>
+            </th>
+            <td>
+               <input class="" type="text" name="rwf_api_key" value="<?php echo get_option('rwf_api_key'); ?>" />
+            </td>
+         </tr>
+      </table>
+
+      <br>
+
+      <input class="button button-primary" type="submit" value="<?php _e("Save", "rwf-gf-members-api"); ?>" />
+
+   </form>
+   <?php
+
+}
+
+add_action( 'admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save' );
+function rwf_gf_members_api_plugin_handle_save() {
+
+   // Get the options that were sent
+   $key = (!empty($_POST["rwf_api_key"])) ? $_POST["rwf_api_key"] : NULL;
+   $endpoint = (!empty($_POST["rwf_api_endpoint"])) ? $_POST["rwf_api_endpoint"] : NULL;
+
+   // API Validation to go here
+
+   // Update the values
+   update_option( "rwf_api_key", $key, TRUE );
+   update_option( "rwf_api_endpoint", $endpoint, TRUE );
+
+   // Redirect back to settings page
+   // The ?page=github corresponds to the "slug" 
+   // set in the fourth parameter of add_submenu_page() above.
+   $redirect_url = get_bloginfo("url") . "/wp-admin/options-general.php?page=rwf_gf_members_api_plugin&status=success";
+   header("Location: ".$redirect_url);
+   exit;
+}
 
 ?>
