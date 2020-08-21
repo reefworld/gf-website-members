@@ -5,7 +5,7 @@ Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within pages and posts using shortcodes (cached using WP transients) from the Members API
 Version: 1.0
 Author: James Greenhalgh
-Author URI: https://www.instagram.com/jamesgreenblue/
+Author URI: https://www.linkedin.com/in/jgrnh/
 License: GPLv2 or later
 Text Domain: rwf-gf-members-api
 */
@@ -23,10 +23,8 @@ function list_top10members_func() {
    if ( false === $top10members ) {
        // Transient expired, refresh the data
 
-       $key = get_option('rwf_api_key');
-       $url = get_option('rwf_api_endpoint') . '/top-10-members?key=' . $key;
-       $data = wp_remote_get($url);
-       $response = wp_remote_retrieve_body($data);
+       $url = get_option('rwf_api_endpoint') . '/top-10-members?key=' . get_option('rwf_api_key');
+       $response = wp_remote_retrieve_body(wp_remote_get($url));
        $json = json_decode($response, true);
 
        set_transient( 'rwf_get_top10members', $json, 4 * HOUR_IN_SECONDS );
@@ -98,10 +96,8 @@ function list_top5bycountry_func( $atts = [] ) {
    if ( false === $countries ) {
        // Transient expired, refresh the data
 
-       $key = get_option('rwf_api_key');
-       $url = get_option('rwf_api_endpoint') . '/countries?key=' . $key;
-       $data = wp_remote_get($url);
-       $response = wp_remote_retrieve_body($data);
+       $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
+       $response = wp_remote_retrieve_body(wp_remote_get($url));
        $json = json_decode($response, true);
 
        set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
@@ -141,10 +137,8 @@ LIST;
    if ( false === $top5bycountry ) {
        // Transient expired, refresh the data
 
-       $key = get_option('rwf_api_key');
-       $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/top-5-members?key=' . $key;
-       $data = wp_remote_get($url);
-       $response = wp_remote_retrieve_body($data);
+       $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/top-5-members?key=' . get_option('rwf_api_key');
+       $response = wp_remote_retrieve_body(wp_remote_get($url));
        $json = json_decode($response, true);
 
        set_transient( $country_transient_name, $json, 4 * HOUR_IN_SECONDS );
@@ -217,10 +211,8 @@ function list_membersbylocation_func( $atts = [] ) {
       if ( false === $countries ) {
          // Transient expired, refresh the data
 
-         $key = get_option('rwf_api_key');
-         $url = get_option('rwf_api_endpoint') . '/countries?key=' . $key;
-         $data = wp_remote_get($url);
-         $response = wp_remote_retrieve_body($data);
+         $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
+         $response = wp_remote_retrieve_body(wp_remote_get($url));
          $json = json_decode($response, true);
 
          set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
@@ -261,10 +253,8 @@ LIST;
       if ( false === $regionsbycountry ) {
          // Transient expired, refresh the data
 
-         $key = get_option('rwf_api_key');
-         $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/regions?key=' . $key;
-         $data = wp_remote_get($url);
-         $response = wp_remote_retrieve_body($data);
+         $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/regions?key=' . get_option('rwf_api_key');
+         $response = wp_remote_retrieve_body(wp_remote_get($url));
          $json = json_decode($response, true);
 
          set_transient( $regions_transient_name, $json, 4 * HOUR_IN_SECONDS );
@@ -288,10 +278,8 @@ LIST;
          if ( false === $locationsbyregion ) {
             // Transient expired, refresh the data
    
-            $key = get_option('rwf_api_key');
-            $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . $key;
-            $data = wp_remote_get($url);
-            $response = wp_remote_retrieve_body($data);
+            $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
+            $response = wp_remote_retrieve_body(wp_remote_get($url));
             $json = json_decode($response, true);
    
             set_transient( $locations_transient_name, $json, 4 * HOUR_IN_SECONDS );
@@ -339,10 +327,8 @@ LIST;
       if ( false === $membersbylocation ) {
          // Transient expired, refresh the data
 
-         $key = get_option('rwf_api_key');
-         $url = get_option('rwf_api_endpoint') . '/locations/' . $locationid . '/members?key=' . $key;
-         $data = wp_remote_get($url);
-         $response = wp_remote_retrieve_body($data);
+         $url = get_option('rwf_api_endpoint') . '/locations/' . $locationid . '/members?key=' . get_option('rwf_api_key');
+         $response = wp_remote_retrieve_body(wp_remote_get($url));
          $json = json_decode($response, true);
 
          set_transient( $members_transient_name, $json, 4 * HOUR_IN_SECONDS );
@@ -410,13 +396,12 @@ LISTING;
 
 
 /**
- * Central location to create all shortcodes.
+ * Central location to create all shortcodes. This ensures that the plugin doesn't hurt page load times.
  */
 function rwf_shortcodes_init() {
    add_shortcode( "list_top10members", "list_top10members_func" );
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
-   /* add_shortcode( "populate_centres", "populate_centres_func" ); */
 }
 add_action( 'init', 'rwf_shortcodes_init' );
 
@@ -457,10 +442,10 @@ function rwf_gf_members_api_plugin_options() {
 
       <input type="hidden" name="action" value="update_rwf_gf_members_api_plugin_settings" />
 
-      <h3><?php _e("Green Fins Members API Plugin Settings", "rwf-gf-members-api"); ?></h3>
+      <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-members-api"); ?></h1>
 
       <p>
-         This plugin displays Green Fins member information on pages and posts using shortcodes from the Members API (cached for 4 hours using WP transients).
+         This plugin displays Green Fins member information on pages and posts using shortcodes from the Members API (cached for 4 hours using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf"; ?>" target="_new">transients</a>).
       </p>
       <p>
          <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
@@ -474,6 +459,10 @@ function rwf_gf_members_api_plugin_options() {
             <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code></li>
          </ul>
       </p>
+
+      <br>
+
+      <h2><?php _e("Plugin Settings", "rwf-gf-members-api"); ?></h2>
 
       <table class="form-table" role="presentation">
          <tr>
@@ -518,8 +507,6 @@ function rwf_gf_members_api_plugin_handle_save() {
    update_option( "rwf_api_endpoint", $endpoint, TRUE );
 
    // Redirect back to settings page
-   // The ?page=github corresponds to the "slug" 
-   // set in the fourth parameter of add_submenu_page() above.
    $redirect_url = get_bloginfo("url") . "/wp-admin/options-general.php?page=rwf_gf_members_api_plugin&status=success";
    header("Location: ".$redirect_url);
    exit;
