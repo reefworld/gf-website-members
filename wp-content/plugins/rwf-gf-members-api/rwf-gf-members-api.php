@@ -19,7 +19,7 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please' );
  */
 function list_top10members_func() {
 
-   $top10members = get_transient( 'get_top10members' );
+   $top10members = get_transient( 'rwf_get_top10members' );
    if ( false === $top10members ) {
        // Transient expired, refresh the data
 
@@ -29,14 +29,14 @@ function list_top10members_func() {
        $response = wp_remote_retrieve_body($data);
        $json = json_decode($response, true);
 
-       set_transient( 'get_top10members', $json, 4 * HOUR_IN_SECONDS );
-       $top10members = get_transient( 'get_top10members' );
+       set_transient( 'rwf_get_top10members', $json, 4 * HOUR_IN_SECONDS );
+       $top10members = get_transient( 'rwf_get_top10members' );
    }
    
    // Handle the case when there are no members or the API is malfunctioning
    if ( empty($top10members) || $top10members["success"] == 0) {
-      delete_transient( 'get_top10members' );
-      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_top10members' in list_top10members_func(). End user has seen an error message, please investigate.");
+      delete_transient( 'rwf_get_top10members' );
+      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top10members' in list_top10members_func(). End user has seen an error message, please investigate.");
       return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
    }
 
@@ -94,7 +94,7 @@ function list_top5bycountry_func( $atts = [] ) {
    );
 
    //load the countries list
-   $countries = get_transient( 'get_countries' );
+   $countries = get_transient( 'rwf_get_countries' );
    if ( false === $countries ) {
        // Transient expired, refresh the data
 
@@ -104,13 +104,13 @@ function list_top5bycountry_func( $atts = [] ) {
        $response = wp_remote_retrieve_body($data);
        $json = json_decode($response, true);
 
-       set_transient( 'get_countries', $json, 4 * HOUR_IN_SECONDS );
-       $countries = get_transient( 'get_countries' );
+       set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
+       $countries = get_transient( 'rwf_get_countries' );
    }
    // Handle the case when there are no countries or the API is malfunctioning
    if ( empty($countries) || $countries["success"] == 0) {
-      delete_transient( 'get_countries' );
-      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_countries' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
+      delete_transient( 'rwf_get_countries' );
+      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
       return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
    }
 
@@ -136,7 +136,7 @@ LIST;
       return "<strong>" . __("Error: Invalid country specified, please check your spelling to dispay list_top5bycountry. The options are:", 'rwf-gf-members-api') . $list . "</strong>";
    }
    
-   $country_transient_name = 'get_top5bycountry_' . $countryinput;
+   $country_transient_name = 'rwf_get_top5bycountry_' . $countryinput;
    $top5bycountry = get_transient( $country_transient_name );
    if ( false === $top5bycountry ) {
        // Transient expired, refresh the data
@@ -153,7 +153,7 @@ LIST;
    // Handle the case when there are no members or the API is malfunctioning
    if ( empty($top5bycountry) || $top5bycountry["success"] == 0) {
       delete_transient( $country_transient_name );
-      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_top5bycountry_' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
+      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top5bycountry_' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
       return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
    }
 
@@ -200,19 +200,20 @@ LISTING;
 /**
  * List Members by Location
  *
- * Outputs a list of members for a given location from the Portal API, cached for 4 hours using WP transients
+ * Outputs a list of members or the average score for a given location from the Portal API, cached for 4 hours using WP transients
  */
 function list_membersbylocation_func( $atts = [] ) {
    // override default attributes with user attributes
    $get_atts = shortcode_atts(
       array(
          'country' => 'Please specify a valid country & location to display the members list',
-         'location' => 'Please specify a valid country & location to display the members list'
+         'location' => 'Please specify a valid country & location to display the members list',
+         'display_average_score' => false
       ), $atts
    );
 
    //load the countries list
-   $countries = get_transient( 'get_countries' );
+   $countries = get_transient( 'rwf_get_countries' );
       if ( false === $countries ) {
          // Transient expired, refresh the data
 
@@ -222,13 +223,13 @@ function list_membersbylocation_func( $atts = [] ) {
          $response = wp_remote_retrieve_body($data);
          $json = json_decode($response, true);
 
-         set_transient( 'get_countries', $json, 4 * HOUR_IN_SECONDS );
-         $countries = get_transient( 'get_countries' );
+         set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
+         $countries = get_transient( 'rwf_get_countries' );
       }
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
-         delete_transient( 'get_countries' );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_countries' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+         delete_transient( 'rwf_get_countries' );
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
          return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -255,7 +256,7 @@ LIST;
       return "<strong>" . __("Error: Invalid country specified, please check your country spelling to display list_membersbylocation. The options are:", 'rwf-gf-members-api') . $list . "</strong>";
    }
    
-   $regions_transient_name = 'get_regionsbycountry_' . $countryinput;
+   $regions_transient_name = 'rwf_get_regionsbycountry_' . $countryinput;
    $regionsbycountry = get_transient( $regions_transient_name );
       if ( false === $regionsbycountry ) {
          // Transient expired, refresh the data
@@ -272,7 +273,7 @@ LIST;
       // Handle the case when there are no results or the API is malfunctioning
       if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
          delete_transient( $regions_transient_name );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_regionsbycountry_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
          return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -282,7 +283,7 @@ LIST;
    $locations = [];
 
    foreach ( $regionsbycountry as $region ){
-      $locations_transient_name = 'get_locationsbyregion_' . $region['name'];
+      $locations_transient_name = 'rwf_get_locationsbyregion_' . $region['name'];
       $locationsbyregion = get_transient( $locations_transient_name );
          if ( false === $locationsbyregion ) {
             // Transient expired, refresh the data
@@ -299,7 +300,7 @@ LIST;
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
             delete_transient( $locations_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_locationsbyregion_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
             return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
          }
       $locationsbyregion = $locationsbyregion['data'];
@@ -312,10 +313,10 @@ LIST;
    }
 
    $results = array_column($locations,"id","name");
-   $locationinput = $get_atts['location'];
+   $location_input = $get_atts['location'];
 
-   if(isset($results[$locationinput])){
-      $locationid = $results[$locationinput];
+   if(isset($results[$location_input])){
+      $locationid = $results[$location_input];
    }
 
    // Handle the case where an invalid option is supplied
@@ -333,7 +334,7 @@ LIST;
    }
 
 
-   $members_transient_name = 'get_membersbylocation_' . $locationinput;
+   $members_transient_name = 'rwf_get_membersbylocation_' . $location_input;
    $membersbylocation = get_transient( $members_transient_name );
       if ( false === $membersbylocation ) {
          // Transient expired, refresh the data
@@ -350,44 +351,52 @@ LIST;
       // Handle the case when there are no results or the API is malfunctioning
       if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
          delete_transient( $members_transient_name );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'get_membersbylocation_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
          return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
       }
 
-/**
- * TODO
- *
- * Show only active & inactive users, grey out inactive
- */
+   //figure out what we are outputting
+   $display_average_score = $get_atts['display_average_score'];
+   if($display_average_score){
 
+      $average_lookup = array_column($locations,"average","name");
+   
+      if(isset($average_lookup[$location_input])){
+         $average_score = $average_lookup[$location_input];
+      }
 
-   // We're going to return a string. First, we open a list.
-   $return = "<ul>";
-
-   // Loop over the returned members
-   $count = 1;
-   foreach( $membersbylocation['data'] as $member ) {
-
-      // Add a list item for each member to the string
-      $return .= <<<LISTING
-      <li>
+      $return = <<<SCORE
          <div>
-            <a target="_blank" href="$member[website]">
-               <img src="$member[logofilename]">
-            </a>
-            <h2>
-            $count. <a target="_blank" href="$member[website]">$member[name]</a>
-            </h2>
-            <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
+            <p class="score">Average $average_score score for $location_input</p>
          </div>
-      </li>
-LISTING;
-
-      $count++;
+SCORE;
    }
+   else {
+      // Display the members list.
+      $return = "<ul>";
 
-   // Close the list
-   $return .= "</ul>";
+      // Loop over the returned members
+      foreach( $membersbylocation['data'] as $member ) {
+         if($member['status'] == 'active' || $member['status'] == 'inactive') {
+            // Add a list item for each member to the string
+            $return .= <<<LISTING
+            <li>
+               <div>
+                  <a target="_blank" href="$member[website]">
+                     <img src="$member[logofilename]" class="$member[status]">
+                  </a>
+                  <h2>
+                     <a target="_blank" href="$member[website]">$member[name]</a>
+                  </h2>
+                  <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
+               </div>
+            </li>
+LISTING;
+         }
+      }
+      // Close the list
+      $return .= "</ul>";
+   }
 
    return $return;
 
