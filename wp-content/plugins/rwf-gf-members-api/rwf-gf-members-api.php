@@ -2,7 +2,7 @@
 /*
 Plugin Name: Display Green Fins member info from Portal API
 Plugin URI: https://reef-world.org
-Description: Display Green Fins member information within pages and posts using shortcodes (cached using WP transients) from the Members API
+Description: Display Green Fins member information within pages and posts using shortcodes from the Members API
 Version: 1.0
 Author: James Greenhalgh
 Author URI: https://www.linkedin.com/in/jgrnh/
@@ -498,11 +498,87 @@ function populate_centres_func() {
             return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
          }
 
-      //flatten
+      // Flatten
       $membersbylocation = $membersbylocation['data'];
-      //append the new locations onto any existing to build the array with each loop
+      // Append the new locations onto any existing to build the array with each loop
       $members = array_merge($members, $membersbylocation);
    }
+
+   // We've built the members list, time to make some posts
+   // Try to disable the time limit to prevent timeouts.
+   @set_time_limit( 0 );
+
+   // seed the database
+   foreach ($members as $member){
+
+      //look for existing centre records
+      $args = array(
+         'post_type' => 'wpsl_stores',
+         'meta_key' => 'wpsl_api_centre_id', //this meta key is created using a wpsl filter in the template functions.php
+         'meta_value' => $member['id'],
+         'post_status' => 'any',
+         'posts_per_page' => -1
+         );
+      $wpsl_post_exists = get_posts($args);
+
+      // Make sure we set the correct post status.
+      if ( $member['status'] == 'active') {
+         $post_status = 'publish';
+      } else {
+         $post_status = 'hidden';
+      }
+
+      if($wpsl_post_exists){
+         // update the existing member record
+         $wpsl_post_id = $wpsl_post_exists[0]->ID;
+         $post = array (
+            'ID'           => $wpsl_post_id,
+            'post_type'    => 'wpsl_stores',
+            'post_status'  => $post_status,
+            'post_title'   => $member['name'],
+            'post_content' => $member['guid']              
+         );
+      } else {
+         // make a new post for the member
+         $post = array (
+            'post_type'    => 'wpsl_stores',
+            'post_status'  => $post_status,
+            'post_title'   => $member['name'],
+            'post_content' => $member['guid']              
+         );
+      }
+
+      $post_id = wp_insert_post( $post );
+
+      // add or update the post meta with the member's info
+      if ( $post_id ) {
+         $postmetas = array (
+            'api_centre_id'      => $member['id'],
+            'api_logo_filename'  => $member['logofilename'],
+            'address'            => $member['address1'],
+            'address2'           => $member['address2'],
+            'city'               => $member['address3'],
+            'state'              => $member['region_name'],
+            'country'            => $member['country_name'],
+            'lat'                => $member['lat'],
+            'lng'                => $member['lng'],
+            'phone'              => $member['telephone'],
+            'url'                => $member['website'],
+            'email'              => $member['email']            
+         );
+
+         foreach ( $postmetas as $meta => $value ) {
+            if ( isset( $value ) && !empty( $value ) ) {
+               update_post_meta( $post_id, 'wpsl_' . $meta, $value );
+            }
+         }
+      }
+      
+   }
+   return "<p>Success</p>";
+   //exit;
+
+/*DEBUG OUTPUT!
 
    // We're going to return a string. First, we open a list.
    $return = "<ul>";
@@ -516,7 +592,7 @@ function populate_centres_func() {
       <li>
          <div>
             <h2>
-            $count. <a target="_blank" href="$member[website]">$member[name]</a>
+            $count. <a target="_blank" href="$member[website]">$member[name], $member[status]</a>
             </h2>
             <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
          </div>
@@ -530,10 +606,146 @@ LISTING;
    $return .= "</ul>";
 
    return $return;
+*/
+}
+
+/**
+ * Remove fax and add API ID to the WPSL additional information
+ */
+function custom_meta_box_fields( $meta_fields ) {
+    
+    $meta_fields[__( 'Additional Information', 'wpsl' )] = array(
+        'phone' => array(
+            'label' => __( 'Tel', 'wpsl' )
+        ),
+        'email' => array(
+            'label' => __( 'Email', 'wpsl' )
+        ),
+        'url' => array(
+            'label' => __( 'Url', 'wpsl' )
+        ),
+        'api_centre_id' => array(
+            'label' => __( 'Api_Centre_Id', 'wpsl' )
+        ),
+        'api_logo_filename' => array(
+         'label' => __( 'Api_Logo_Filename', 'wpsl' )
+        )
+    );
+
+    return $meta_fields;
+}
+
+/**
+ * Hide the start marker
+ */
+function custom_js_settings( $settings ) {
+
+    $settings['startMarker'] = '';
+
+    return $settings;
+}
+
+/**
+ * Use a custom template from the map to suit our design
+ */
+function custom_templates( $templates ) {
+
+    /**
+     * The 'id' is for internal use and must be unique ( since 2.0 ).
+     * The 'name' is used in the template dropdown on the settings page.
+     * The 'path' points to the location of the custom template,
+     * in this case the folder of your active theme.
+     */
+    $templates[] = array (
+        'id'   => 'rwfgfmaponly',
+        'name' => 'RWF Green Fins map only template',
+        'path' => get_stylesheet_directory() . '/' . 'wpsl-templates/rwf-gf-map-only.php',
+    );
+
+    return $templates;
+}
+
+/**
+ * Collect the Used Categories to display categories in the map info window (for bronze, silver, gold, top 10)
+ */
+function custom_store_meta( $store_meta, $store_id ) {
+    
+    $terms = wp_get_post_terms( $store_id, 'wpsl_store_category' );
+    
+    $store_meta['terms'] = '';
+    
+    if ( $terms ) {
+        if ( !is_wp_error( $terms ) ) {
+            if ( count( $terms ) > 1 ) {
+                $location_terms = array();
+
+                foreach ( $terms as $term ) {
+                    $location_terms[] = $term->name;
+                }
+
+                $store_meta['terms'] = implode( ', ', $location_terms );
+            } else {
+                $store_meta['terms'] = $terms[0]->name;    
+            }
+        }
+    }
+    
+    return $store_meta;
+}
+
+/**
+ * Include additional meta data in the JSON response on the front end.
+ */
+function custom_frontend_meta_fields( $store_fields ) {
+
+    $store_fields['wpsl_api_logo_filename'] = array( 
+        'name' => 'api_logo_filename' 
+    );
+    
+    return $store_fields;
 }
 
 
+/**
+ * Marker Info Window Template with modifications to display the category (for bronze, silver, gold, top 10)
+ */
+function custom_info_window_template() {
+   
+   global $wpsl_settings, $wpsl;
 
+   $info_window_template = '<div data-store-id="<%= id %>" class="wpsl-info-window">' . "\r\n";
+   $info_window_template .= "\t\t" . '<p>' . "\r\n";
+   $info_window_template .= "\t\t\t" . '<img src="<%= api_logo_filename %>" alt="Logo for <%= store %>" width="50px"><br>' . "\r\n";
+   $info_window_template .= "\t\t\t" .  wpsl_store_header_template() . "\r\n";  
+   $info_window_template .= "\t\t\t" . '<span><%= address %></span>' . "\r\n";
+   $info_window_template .= "\t\t\t" . '<% if ( address2 ) { %>' . "\r\n";
+   $info_window_template .= "\t\t\t" . '<span><%= address2 %></span>' . "\r\n";
+   $info_window_template .= "\t\t\t" . '<% } %>' . "\r\n";
+   $info_window_template .= "\t\t\t" . '<span>' . wpsl_address_format_placeholders() . '</span>' . "\r\n";
+   $info_window_template .= "\t\t" . '</p>' . "\r\n";
+   
+   // Include the category names.
+   $info_window_template .= "\t\t" . '<% if ( terms ) { %>' . "\r\n";
+   $info_window_template .= "\t\t" . '<p>' . __( 'Categories:', 'wpsl' ) . ' <%= terms %></p>' . "\r\n";
+   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
+   
+
+   $info_window_template .= "\t\t" . '<% if ( phone ) { %>' . "\r\n";
+   $info_window_template .= "\t\t" . '<span><strong>' . esc_html( $wpsl->i18n->get_translation( 'phone_label', __( 'Phone', 'wpsl' ) ) ) . '</strong>: <%= formatPhoneNumber( phone ) %></span>' . "\r\n";
+   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
+   $info_window_template .= "\t\t" . '<% if ( url ) { %>' . "\r\n";
+   $info_window_template .= "\t\t" . '<span><strong>' . esc_html( $wpsl->i18n->get_translation( 'url_label', __( 'Url', 'wpsl' ) ) ) . '</strong>: <a target="_blank" href="<%= url %>"><%= url %></a></span>' . "\r\n";
+   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
+   $info_window_template .= "\t\t" . '<% if ( email ) { %>' . "\r\n";
+   $info_window_template .= "\t\t" . '<span><strong>' . esc_html( $wpsl->i18n->get_translation( 'email_label', __( 'Email', 'wpsl' ) ) ) . '</strong>: <%= formatEmail( email ) %></span>' . "\r\n";
+   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
+
+
+   $info_window_template .= "\t\t" . '<%= createInfoWindowActions( id ) %>' . "\r\n";
+   $info_window_template .= "\t" . '</div>' . "\r\n";
+   
+   return $info_window_template;
+}
 
 
 
@@ -542,19 +754,28 @@ LISTING;
 /**
  * Central location to create all shortcodes. This ensures that the plugin doesn't hurt page load times.
  */
-function rwf_shortcodes_init() {
+function rwf_gf_members_api_init() {
+   add_action( "admin_menu", "rwf_gf_members_api_plugin_menu_func" );
+
    add_shortcode( "list_top10members", "list_top10members_func" );
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
    add_shortcode( "populate_centres", "populate_centres_func" );
+
+   // map filters
+   add_filter( 'wpsl_meta_box_fields', 'custom_meta_box_fields' );
+   add_filter( 'wpsl_js_settings', 'custom_js_settings' );
+   add_filter( 'wpsl_templates', 'custom_templates' );
+   add_filter( 'wpsl_store_meta', 'custom_store_meta', 10, 2 );
+   add_filter( 'wpsl_info_window_template', 'custom_info_window_template' );
+   add_filter( 'wpsl_frontend_meta_fields', 'custom_frontend_meta_fields' );
 }
-add_action( 'init', 'rwf_shortcodes_init' );
+add_action( 'init', 'rwf_gf_members_api_init' );
 
 
 /**
  * Admin menu for the API key and endpoint management
  */
-add_action( "admin_menu", "rwf_gf_members_api_plugin_menu_func" );
 function rwf_gf_members_api_plugin_menu_func() {
    add_submenu_page( "options-general.php",  // Which menu parent
                   "Green Fins Members API Plugin Settings",            // Page title
@@ -590,7 +811,7 @@ function rwf_gf_members_api_plugin_options() {
       <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-members-api"); ?></h1>
 
       <p>
-         This plugin displays Green Fins member information on pages and posts using shortcodes from the Members API (cached for 4 hours using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf"; ?>" target="_new">transients</a>).
+         This plugin displays Green Fins member information on pages and posts using shortcodes from the Members API (cached for 4 hours using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_get_"; ?>" target="_new">transients</a>).
       </p>
       <p>
          <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
