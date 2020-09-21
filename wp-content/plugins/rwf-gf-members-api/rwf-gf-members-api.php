@@ -2,7 +2,7 @@
 /*
 Plugin Name: Display Green Fins member info from Portal API
 Plugin URI: https://reef-world.org
-Description: Display Green Fins member information within maps, pages and posts from the Members API. 
+Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
 Version: 1.0
 Author: James Greenhalgh
 Author URI: https://www.linkedin.com/in/jgrnh/
@@ -38,33 +38,46 @@ function list_top10members_func() {
       return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
    }
 
-   // We're going to return a string. First, we open a list.
-   $return = "<ul>";
-
    // Loop over the returned members
    $count = 1;
    foreach( $top10members['data'] as $member ) {
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
-      <li>
-         <div>
-            <a target="_blank" href="$member[website]">
-               <img src="$member[logofilename]">
-            </a>
-            <h2>
-            $count. <a target="_blank" href="$member[website]">$member[name]</a>
-            </h2>
-            <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
+         <div class="grid-33 tablet-grid-50 mobile-grid-100">
+
+            <div class="grid-100 tablet-grid-100 mobile-grid-100">
+               <div class="gf-centre-listing-count">
+                  <p>$count</p>
+               </div>
+            </div>
+
+            <div class="gf-centre-listing grid-100 tablet-grid-100 mobile-grid-100">
+
+                  <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                     <a target="_blank" href="$member[website]">
+                        <img src="$member[logofilename]">
+                     </a>
+                  </div>
+
+                  <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+                     <h2>
+                        <a target="_blank" href="$member[website]">$member[name]</a>
+                     </h2>
+                     <p class="status">ACTIVE</p>
+                     <p class="industry">$member[industry]</p>
+                     <p class="description">$member[location_name], $member[region_name], <strong>$member[country_name]</strong></p>
+
+                     <a class="gf-button-member" target="_blank" href="$member[website]">Visit Website</a>
+                  </div>
+
+            </div>
+
          </div>
-      </li>
 LISTING;
 
       $count++;
    }
-
-   // Close the list
-   $return .= "</ul>";
 
    return $return;
 }
@@ -417,7 +430,7 @@ function rwf_gf_populate_members_as_posts_func() {
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in populate_centres_func(). Please re-trigger the function for up-to-date information from the Portal API.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
          return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -444,7 +457,7 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
             delete_transient( $regions_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in populate_centres_func(). Please re-trigger the function for up-to-date information from the Portal API.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
          }
 
@@ -469,7 +482,7 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
             delete_transient( $locations_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in populate_centres_func(). Please re-trigger the function for up-to-date information from the Portal API.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
          }
 
@@ -494,7 +507,7 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
             delete_transient( $members_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in populate_centres_func(). Please re-trigger the function for up-to-date information from the Portal API.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
          }
 
@@ -514,7 +527,7 @@ function rwf_gf_populate_members_as_posts_func() {
       //look for existing centre records
       $args = array(
          'post_type' => 'wpsl_stores',
-         'meta_key' => 'wpsl_api_centre_id', //this meta key is created using a wpsl filter in the template functions.php
+         'meta_key' => 'wpsl_api_centre_id', //this meta key is created using the wpsl filter custom_meta_box_fields() below
          'meta_value' => $member['id'],
          'post_status' => 'any',
          'posts_per_page' => -1
@@ -577,38 +590,7 @@ function rwf_gf_populate_members_as_posts_func() {
    }
    wp_mail("it@reef-world.org", "Success: rwf_gf_populate_members_as_posts_func()", "rwf_gf_populate_members_as_posts_func() ran successfully, the member map positions have been updated");
 
-   //return "<p>Success</p>";
    exit;
-
-/*DEBUG OUTPUT!
-
-   // We're going to return a string. First, we open a list.
-   $return = "<ul>";
-
-   // Loop over the returned members
-   $count = 1;
-   foreach( $members as $member ) {
-
-      // Add a list item for each member to the string
-      $return .= <<<LISTING
-      <li>
-         <div>
-            <h2>
-            $count. <a target="_blank" href="$member[website]">$member[name], $member[status]</a>
-            </h2>
-            <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
-         </div>
-      </li>
-LISTING;
-
-      $count++;
-   }
-
-   // Close the list
-   $return .= "</ul>";
-
-   return $return;
-*/
 }
 
 
@@ -858,20 +840,6 @@ function rwf_gf_members_api_plugin_handle_save() {
 
 
 
-/**
- * Simple shortcode for the footer menu
- */
-function print_menu_shortcode($atts, $content = null) {
-   extract(shortcode_atts(array( 'name' => null, 'class' => null ), $atts));
-   return wp_nav_menu( array( 'menu' => $name, 'menu_class' => 'gf-footer-menu', 'echo' => false ) );
-}
-   
-
-
-
-
-
-
 
 
 
@@ -880,7 +848,6 @@ function print_menu_shortcode($atts, $content = null) {
  * Central location to initiate all shortcodes and actions. This ensures that the plugin doesn't hurt page load times.
  */
 function rwf_gf_members_api_init() {
-   add_shortcode('menu', 'print_menu_shortcode');
    add_action( "admin_menu", "rwf_gf_members_api_plugin_menu_func" );
    add_action( 'admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save' );
    if ( ! wp_next_scheduled( 'rwf_gf_populate_members_as_posts' ) ) {
@@ -891,7 +858,6 @@ function rwf_gf_members_api_init() {
    add_shortcode( "list_top10members", "list_top10members_func" );
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
-   add_shortcode( "trigger_populate_members_as_posts", "rwf_gf_populate_members_as_posts_func" );
 
    // map filters
    add_filter( 'wpsl_meta_box_fields', 'custom_meta_box_fields' );
