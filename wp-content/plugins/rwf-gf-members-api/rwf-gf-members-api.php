@@ -38,39 +38,26 @@ function list_top10members_func() {
       return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
    }
 
+   // We're going to return a grid container.
+   $return = "<div class=\"grid-container\">";
+
    // Loop over the returned members
    $count = 1;
    foreach( $top10members['data'] as $member ) {
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
-         <div class="grid-33 tablet-grid-50 mobile-grid-100">
+         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
 
-            <div class="grid-100 tablet-grid-100 mobile-grid-100">
-               <div class="gf-centre-listing-count">
-                  <p>$count</p>
-               </div>
+            <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                  <img src="$member[logofilename]">
             </div>
 
-            <div class="gf-centre-listing grid-100 tablet-grid-100 mobile-grid-100">
-
-                  <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                     <a target="_blank" href="$member[website]">
-                        <img src="$member[logofilename]">
-                     </a>
-                  </div>
-
-                  <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-                     <h2>
-                        <a target="_blank" href="$member[website]">$member[name]</a>
-                     </h2>
-                     <p class="status">ACTIVE</p>
-                     <p class="industry">$member[industry]</p>
-                     <p class="description">$member[location_name], $member[region_name], <strong>$member[country_name]</strong></p>
-
-                     <a class="gf-button-member" target="_blank" href="$member[website]">Visit Website</a>
-                  </div>
-
+            <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+               <h2>
+                  <span class="count">$count</span><a target="_blank" href="$member[website]">$member[name]</a>
+               </h2>
+               <p class="description">$member[location_name], $member[region_name], <strong>$member[country_name]</strong></p>
             </div>
 
          </div>
@@ -78,6 +65,8 @@ LISTING;
 
       $count++;
    }
+
+   $return .= "</div>";
 
    return $return;
 }
@@ -164,8 +153,8 @@ LIST;
       return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
    }
 
-   // We're going to return a string. First, we open a list.
-   $return = "<ul>";
+   // We're going to return a grid container.
+   $return = "<div class=\"grid-container\">";
 
    // Loop over the returned members
    $count = 1;
@@ -173,24 +162,27 @@ LIST;
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
-      <li>
-         <div>
-            <a target="_blank" href="$member[website]">
-               <img src="$member[logofilename]">
-            </a>
-            <h2>
-            $count. <a target="_blank" href="$member[website]">$member[name]</a>
-            </h2>
-            <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
+         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
+
+            <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                  <img src="$member[logofilename]">
+            </div>
+
+            <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+               <h2>
+                  <span class="count">$count</span><a target="_blank" href="$member[website]">$member[name]</a>
+               </h2>
+               <p class="description">$member[location_name], $member[region_name]</strong></p>
+            </div>
+
          </div>
-      </li>
 LISTING;
 
       $count++;
    }
 
-   // Close the list
-   $return .= "</ul>";
+   // Close the div
+   $return .= "</div>";
 
    return $return;
 
@@ -369,30 +361,46 @@ LIST;
 SCORE;
    }
    else {
-      // Display the members list.
-      $return = "<ul>";
+   // We're going to return a grid container.
+   $return = "<div class=\"grid-container\">";
 
+   $i = 0;
       // Loop over the returned members
       foreach( $membersbylocation['data'] as $member ) {
          if($member['status'] == 'active' || $member['status'] == 'inactive') {
+            $i++;
             // Add a list item for each member to the string
             $return .= <<<LISTING
-            <li>
-               <div>
-                  <a target="_blank" href="$member[website]">
-                     <img src="$member[logofilename]" class="$member[status]">
-                  </a>
+            <div class="gf-centre-listing gf-member-$member[status] gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
+
+               <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                     <img src="$member[logofilename]">
+               </div>
+
+               <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
                   <h2>
                      <a target="_blank" href="$member[website]">$member[name]</a>
                   </h2>
-                  <p class="description">$member[location_name], $member[region_name], $member[country_name]</p>
+                  
+                     <p class="status">$member[status]</p>
+                     <p>Address: $member[address1], $member[address2], $member[address3]</p>
+                     <p class="contact">Contact info:</p>
+                     <p class="contact-item">$member[email]</p>
+                     <p class="contact-item">$member[telephone]</p>
                </div>
-            </li>
+
+            </div>
 LISTING;
          }
+         if( 3 == $i ) {
+            $i = 0;
+            $return .= <<<CLEARFIX
+            <div class="clear"></div>
+CLEARFIX;
+         }
       }
-      // Close the list
-      $return .= "</ul>";
+      // Close the div
+      $return .= "</div>";
    }
 
    return $return;
