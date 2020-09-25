@@ -43,11 +43,13 @@ function list_top10members_func() {
 
    // Loop over the returned members
    $count = 1;
+   $i = 0;
    foreach( $top10members['data'] as $member ) {
+      $i++;
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
-         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
+         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
             <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
                   <img src="$member[logofilename]">
@@ -57,12 +59,18 @@ function list_top10members_func() {
                <h2>
                   <span class="count">$count</span><a target="_blank" href="$member[website]">$member[name]</a>
                </h2>
+               <p class="industry">$member[industry]</p>
                <p class="description">$member[location_name], $member[region_name], <strong>$member[country_name]</strong></p>
             </div>
 
          </div>
 LISTING;
-
+         if( 3 == $i ) {
+            $i = 0;
+            $return .= <<<CLEARFIX
+            <div class="clear"></div>
+CLEARFIX;
+         }
       $count++;
    }
 
@@ -158,11 +166,13 @@ LIST;
 
    // Loop over the returned members
    $count = 1;
+   $i = 0;
    foreach( $top5bycountry['data'] as $member ) {
+      $i++;
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
-         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
+         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
             <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
                   <img src="$member[logofilename]">
@@ -172,12 +182,18 @@ LIST;
                <h2>
                   <span class="count">$count</span><a target="_blank" href="$member[website]">$member[name]</a>
                </h2>
+               <p class="industry">$member[industry]</p>
                <p class="description">$member[location_name], $member[region_name]</strong></p>
             </div>
 
          </div>
 LISTING;
-
+         if( 3 == $i ) {
+            $i = 0;
+            $return .= <<<CLEARFIX
+            <div class="clear"></div>
+CLEARFIX;
+         }
       $count++;
    }
 
@@ -352,12 +368,26 @@ LIST;
    
       if(isset($average_lookup[$location_input])){
          $average_score = $average_lookup[$location_input];
+         $average_score_percent = 100 - ($average_score / 330 * 100); //We want a zero score to fill the progress bar
+
+         if ($average_score < 28) {
+            $average_score_style = 'lower';
+         }
+         elseif ($average_score < 205) {
+            $average_score_style = 'middle';
+         }         
+         else {
+            $average_score_style = 'upper';
+         }         
       }
 
       $return = <<<SCORE
-         <div>
-            <p class="score">Average $average_score score for $location_input</p>
+
+         <h2 class="gf-score">$average_score</h2>
+         <div class="gf-score-meter">
+            <span class="gf-score-$average_score_style" style="width: $average_score_percent%"></span>
          </div>
+
 SCORE;
    }
    else {
@@ -367,11 +397,11 @@ SCORE;
    $i = 0;
       // Loop over the returned members
       foreach( $membersbylocation['data'] as $member ) {
-         if($member['status'] == 'active' || $member['status'] == 'inactive') {
+         if($member['status'] == 'active') {
             $i++;
             // Add a list item for each member to the string
             $return .= <<<LISTING
-            <div class="gf-centre-listing gf-member-$member[status] gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
+            <div class="gf-centre-listing gf-member-$member[status] gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
                <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
                      <img src="$member[logofilename]">
@@ -383,7 +413,8 @@ SCORE;
                   </h2>
                   
                      <p class="status">$member[status]</p>
-                     <p>Address: $member[address1], $member[address2], $member[address3]</p>
+                     <p class="industry">$member[industry]</p>
+                     <p><strong>Address:</strong> $member[address1], $member[address2], $member[address3]</p>
                      <p class="contact">Contact info:</p>
                      <p class="contact-item">$member[email]</p>
                      <p class="contact-item">$member[telephone]</p>
@@ -397,6 +428,41 @@ LISTING;
             $return .= <<<CLEARFIX
             <div class="clear"></div>
 CLEARFIX;
+         }
+      }
+
+      foreach( $membersbylocation['data'] as $member ) {
+         if($member['status'] == 'inactive') {
+            $i++;
+            // Add a list item for each member to the string
+            $return .= <<<LISTINGI
+            <div class="gf-centre-listing gf-member-$member[status] gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
+
+               <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                     <img src="$member[logofilename]">
+               </div>
+
+               <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+                  <h2>
+                     <a target="_blank" href="$member[website]">$member[name]</a>
+                  </h2>
+                  
+                     <p class="status">$member[status]</p>
+                     <p class="industry">$member[industry]</p>
+                     <p><strong>Address:</strong> $member[address1], $member[address2], $member[address3]</p>
+                     <p class="contact">Contact info:</p>
+                     <p class="contact-item">$member[email]</p>
+                     <p class="contact-item">$member[telephone]</p>
+               </div>
+
+            </div>
+LISTINGI;
+         }
+         if( 3 == $i ) {
+            $i = 0;
+            $return .= <<<CLEARFIXI
+            <div class="clear"></div>
+CLEARFIXI;
          }
       }
       // Close the div
