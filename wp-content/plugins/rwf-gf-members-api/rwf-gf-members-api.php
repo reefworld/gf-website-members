@@ -35,7 +35,7 @@ function list_top10members_func() {
    if ( empty($top10members) || $top10members["success"] == 0) {
       delete_transient( 'rwf_get_top10members' );
       wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top10members' in list_top10members_func(). End user has seen an error message, please investigate.");
-      return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+      return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
    // We're going to return a grid container.
@@ -117,7 +117,7 @@ function list_top5bycountry_func( $atts = [] ) {
    if ( empty($countries) || $countries["success"] == 0) {
       delete_transient( 'rwf_get_countries' );
       wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
-      return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+      return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
    // lookup the country id by the user specified text
@@ -158,7 +158,7 @@ LIST;
    if ( empty($top5bycountry) || $top5bycountry["success"] == 0) {
       delete_transient( $country_transient_name );
       wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top5bycountry_' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
-      return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+      return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
    // We're going to return a grid container.
@@ -243,7 +243,7 @@ function list_membersbylocation_func( $atts = [] ) {
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
          wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
-         return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    // lookup the country id by the user specified text
@@ -285,7 +285,7 @@ LIST;
       if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
          delete_transient( $regions_transient_name );
          wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
-         return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    
@@ -310,7 +310,7 @@ LIST;
          if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
             delete_transient( $locations_transient_name );
             wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
-            return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       //flatten
@@ -357,7 +357,7 @@ LIST;
       if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
          delete_transient( $members_transient_name );
          wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
-         return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    //figure out what we are outputting
@@ -367,7 +367,7 @@ LIST;
       $average_lookup = array_column($locations,"average","name");
    
       if(isset($average_lookup[$location_input])){
-         $average_score = $average_lookup[$location_input];
+         $average_score = round($average_lookup[$location_input]);
          $average_score_percent = 100 - ($average_score / 330 * 100); //We want a zero score to fill the progress bar
 
          if ($average_score < 28) {
@@ -383,10 +383,101 @@ LIST;
 
       $return = <<<SCORE
 
+      <div class="gb-container gb-container-f07c0c81"><div class="gb-inside-container"></div></div>
+
+
+
+<div class="gb-container gb-container-a57dea89 gf-section-average-score"><div class="gb-inside-container">
+<h1 class="gb-headline gb-headline-a284ca0f">Average Score</h1>
+
+
+
+<p>This is the average environmental performance score of members in this location</p>
+
          <h2 class="gf-score">$average_score</h2>
          <div class="gf-score-meter">
             <span class="gf-score-$average_score_style" style="width: $average_score_percent%"></span>
          </div>
+
+         <div class="gb-container gb-container-d429c552"><div class="gb-inside-container">
+         <div class="gb-grid-wrapper gb-grid-wrapper-e77d8655">
+         <div class="gb-grid-column gb-grid-column-fe72985d"><div class="gb-container gb-container-fe72985d"><div class="gb-inside-container"></div></div></div>
+         
+         
+         
+         <div class="gb-grid-column gb-grid-column-34fb67fb"><div class="gb-container gb-container-34fb67fb"><div class="gb-inside-container">
+         <h2 class="gb-headline gb-headline-90c84c3a">330</h2>
+         
+         
+         
+         <h2 class="gb-headline gb-headline-c96e550c">Poor Environmental Performance</h2>
+         </div></div></div>
+         
+         
+         
+         <div class="gb-grid-column gb-grid-column-12f58e34"><div class="gb-container gb-container-12f58e34"><div class="gb-inside-container">
+         <h2 class="gb-headline gb-headline-46b7cf1b">165</h2>
+         
+         
+         
+         <h2 class="gb-headline gb-headline-ff77cb36">Needs Improvement</h2>
+         </div></div></div>
+         
+         
+         
+         <div class="gb-grid-column gb-grid-column-39cfbbb8"><div class="gb-container gb-container-39cfbbb8"><div class="gb-inside-container">
+         <h2 class="gb-headline gb-headline-0f99cdfd">0</h2>
+         
+         
+         
+         <h2 class="gb-headline gb-headline-d7236770">Great Environmental Performance</h2>
+         </div></div></div>
+         
+         
+         
+         <div class="gb-grid-column gb-grid-column-8ce327e6"><div class="gb-container gb-container-8ce327e6"><div class="gb-inside-container"></div></div></div>
+         </div>
+         </div></div>
+         
+         
+         
+         <p>Annually, Green Fins members have their environmental performance evaluated by trained assessors. Each assessment results in a score based on a traffic light rating system for how well risks to the environment are managed. The lower the score, the better the environmental performance. Each member’s score is confidential and continued membership is based on ongoing improvement.</p>
+         
+         
+         
+         <div class="gb-container gb-container-e88999f6"><div class="gb-inside-container">
+         <div class="gb-grid-wrapper gb-grid-wrapper-d80d1d7a">
+         <div class="gb-grid-column gb-grid-column-e0f04d97"><div class="gb-container gb-container-e0f04d97"><div class="gb-inside-container">
+         <h2 class="gb-headline gb-headline-8040ba89">Active</h2>
+         
+         
+         
+         <p>A member that has been assessed within the last 18 months and successfully reduced their environmental impact.</p>
+         </div></div></div>
+         
+         
+         
+         <div class="gb-grid-column gb-grid-column-f3d10a1f"><div class="gb-container gb-container-f3d10a1f"><div class="gb-inside-container">
+         <h2 class="gb-headline gb-headline-5a18dd14">Inactive</h2>
+         
+         
+         
+         <p>A member who was previously active but has not had an assessment to verify their environmental impact in the last 18 months.</p>
+         </div></div></div>
+         
+         
+         
+         <div class="gb-grid-column gb-grid-column-db558dc6"><div class="gb-container gb-container-db558dc6"><div class="gb-inside-container">
+         <h2 class="gb-headline gb-headline-040888e5">Suspended</h2>
+         
+         
+         
+         <p>A member that has not managed to reduce their threat to the marine environment or has been involved in an activity that is seen as seriously detrimental to the marine environment. Suspended members are not listed.</p>
+         </div></div></div>
+         </div>
+         </div></div>
+         </div></div>
+         <div class="gb-container gb-container-19322339"><div class="gb-inside-container"></div></div>
 
 SCORE;
    }
@@ -505,7 +596,7 @@ function rwf_gf_populate_members_as_posts_func() {
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
          wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
-         return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    //flatten
@@ -532,7 +623,7 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
             delete_transient( $regions_transient_name );
             wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
-            return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       //flatten
@@ -557,7 +648,7 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
             delete_transient( $locations_transient_name );
             wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
-            return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       //flatten
@@ -582,7 +673,7 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
             delete_transient( $members_transient_name );
             wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
-            return "<strong>" . __("Error: Unable to fetch data from Portal API.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       // Flatten
