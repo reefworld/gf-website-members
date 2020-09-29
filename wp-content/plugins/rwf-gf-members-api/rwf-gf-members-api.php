@@ -294,7 +294,7 @@ LIST;
    $locations = [];
 
    foreach ( $regionsbycountry as $region ){
-      $locations_transient_name = 'rwf_get_locationsbyregion_' . $region['name'];
+      $locations_transient_name = 'rwf_get_locationsbyregion_' . $countryinput . '_' . $region['name']; //we need this level of verbosity because there are region name collisions
       $locationsbyregion = get_transient( $locations_transient_name );
          if ( false === $locationsbyregion ) {
             // Transient expired, refresh the data
