@@ -27,7 +27,7 @@ get_header(); ?>
                     echo do_shortcode( '[wpsl_address]' );
 
                     // Add the map shortcode
-                    echo do_shortcode( '[wpsl_map]' );                    
+                    echo do_shortcode( '[wpsl_map zoom="16"]' );                    
                 ?>
                 </div>
             </article>
