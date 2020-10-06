@@ -157,7 +157,7 @@ LIST;
    // Handle the case when there are no members or the API is malfunctioning
    if ( empty($top5bycountry) || $top5bycountry["success"] == 0) {
       delete_transient( $country_transient_name );
-      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top5bycountry_' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
+      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top5bycountry_' for " . $countryinput . " in list_top5bycountry_func(). End user has seen an error message, please investigate.");
       return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
@@ -284,7 +284,7 @@ LIST;
       // Handle the case when there are no results or the API is malfunctioning
       if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
          delete_transient( $regions_transient_name );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' for " . $countryinput . " in list_membersbylocation_func(). End user has seen an error message, please investigate.");
          return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -309,7 +309,7 @@ LIST;
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
             delete_transient( $locations_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' for" . $countryinput . " and " . $region . " in list_membersbylocation_func(). End user has seen an error message, please investigate.");
             return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
@@ -356,7 +356,7 @@ LIST;
       // Handle the case when there are no results or the API is malfunctioning
       if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
          delete_transient( $members_transient_name );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' for" . $location_input . " in list_membersbylocation_func(). End user has seen an error message, please investigate.");
          return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -622,39 +622,39 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
             delete_transient( $regions_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_regionsbycountry_' for " . $country['name'] . " in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       //flatten
       $regionsbycountry = $regionsbycountry['data'];
       //append the new locations onto any existing to build the array with each loop
-      $regions = array_merge($regions, $regionsbycountry);
-   }
+      //$regions = array_merge($regions, $regionsbycountry);
 
-   foreach ( $regions as $region ){
-      $locations_transient_name = 'rwf_get_locationsbyregion_' . $region['name'];
-      $locationsbyregion = get_transient( $locations_transient_name );
-         if ( false === $locationsbyregion ) {
-            // Transient expired, refresh the data
-            $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
-            $response = wp_remote_retrieve_body(wp_remote_get($url));
-            $json = json_decode($response, true);
-   
-            set_transient( $locations_transient_name, $json, 4 * HOUR_IN_SECONDS );
+         foreach ( $regionsbycountry as $region ){
+            $locations_transient_name = 'rwf_get_locationsbyregion_' . $country['name'] . '_' . $region['name']; //we need this level of verbosity because there are region name collisions
             $locationsbyregion = get_transient( $locations_transient_name );
-         }
-         // Handle the case when there are no results or the API is malfunctioning
-         if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
-            delete_transient( $locations_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
-            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
-         }
+               if ( false === $locationsbyregion ) {
+                  // Transient expired, refresh the data
+                  $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
+                  $response = wp_remote_retrieve_body(wp_remote_get($url));
+                  $json = json_decode($response, true);
+         
+                  set_transient( $locations_transient_name, $json, 4 * HOUR_IN_SECONDS );
+                  $locationsbyregion = get_transient( $locations_transient_name );
+               }
+               // Handle the case when there are no results or the API is malfunctioning
+               if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
+                  delete_transient( $locations_transient_name );
+                  wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_locationsbyregion_' for " . $country['name'] . " and " . $region['name'] . " in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
+                  return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+               }
 
-      //flatten
-      $locationsbyregion = $locationsbyregion['data'];
-      //append the new locations onto any existing to build the array with each loop
-      $locations = array_merge($locations, $locationsbyregion);
+            //flatten
+            $locationsbyregion = $locationsbyregion['data'];
+            //append the new locations onto any existing to build the array with each loop
+            $locations = array_merge($locations, $locationsbyregion);
+         }
    }
 
    foreach ( $locations as $location ){
@@ -672,7 +672,7 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
             delete_transient( $members_transient_name );
-            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
+            wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_membersbylocation_' for " . $location['name'] . " in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
