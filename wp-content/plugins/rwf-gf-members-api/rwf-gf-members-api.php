@@ -103,22 +103,22 @@ function list_top5bycountry_func( $atts = [] ) {
 
    //load the countries list
    $countries = get_transient( 'rwf_get_countries' );
-   if ( false === $countries ) {
-       // Transient expired, refresh the data
+      if ( false === $countries ) {
+         // Transient expired, refresh the data
 
-       $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-       $response = wp_remote_retrieve_body(wp_remote_get($url));
-       $json = json_decode($response, true);
+         $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
+         $response = wp_remote_retrieve_body(wp_remote_get($url));
+         $json = json_decode($response, true);
 
-       set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
-       $countries = get_transient( 'rwf_get_countries' );
-   }
-   // Handle the case when there are no countries or the API is malfunctioning
-   if ( empty($countries) || $countries["success"] == 0) {
-      delete_transient( 'rwf_get_countries' );
-      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in list_top5bycountry_func(). End user has seen an error message, please investigate.");
-      return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
-   }
+         set_transient( 'rwf_get_countries', $json, 7 * DAY_IN_SECONDS );
+         $countries = get_transient( 'rwf_get_countries' );
+      }
+      // Handle the case when there are no countries or the API is malfunctioning
+      if ( empty($countries) || $countries["success"] == 0) {
+         delete_transient( 'rwf_get_countries' );
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch the countries list from Portal API via 'rwf_get_countries' (status code: " . $countries["code"] . ") in list_top5bycountry_func() on page " . $get_atts['country'] . ". End user has seen an error message, please investigate.");
+         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+      }
 
    // lookup the country id by the user specified text
    $countries = $countries['data'];
@@ -157,7 +157,7 @@ LIST;
    // Handle the case when there are no members or the API is malfunctioning
    if ( empty($top5bycountry) || $top5bycountry["success"] == 0) {
       delete_transient( $country_transient_name );
-      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_top5bycountry_' for " . $countryinput . " in list_top5bycountry_func(). End user has seen an error message, please investigate.");
+      wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch country top 5 list from Portal API via 'rwf_get_top5bycountry_' for " . $countryinput . " in list_top5bycountry_func(). End user has seen an error message, please investigate.");
       return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
@@ -236,13 +236,13 @@ function list_membersbylocation_func( $atts = [] ) {
          $response = wp_remote_retrieve_body(wp_remote_get($url));
          $json = json_decode($response, true);
 
-         set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
+         set_transient( 'rwf_get_countries', $json, 7 * DAY_IN_SECONDS );
          $countries = get_transient( 'rwf_get_countries' );
       }
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in list_membersbylocation_func(). End user has seen an error message, please investigate.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch the countries list from Portal API via 'rwf_get_countries' (status code: " . $countries["code"] . ") in list_membersbylocation_func() on page " . $get_atts['country'] . " > " . $get_atts['location'] . " > Display average: " . $get_atts['display_average_score'] .  ". End user has seen an error message, please investigate.");
          return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -589,13 +589,13 @@ function rwf_gf_populate_members_as_posts_func() {
          $response = wp_remote_retrieve_body(wp_remote_get($url));
          $json = json_decode($response, true);
 
-         set_transient( 'rwf_get_countries', $json, 4 * HOUR_IN_SECONDS );
+         set_transient( 'rwf_get_countries', $json, 7 * DAY_IN_SECONDS );
          $countries = get_transient( 'rwf_get_countries' );
       }
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch data from Portal API via 'rwf_get_countries' in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
+         wp_mail("it@reef-world.org", "Alert: Error triggered on Green Fins Wordpress site", "Error: Unable to fetch the countries list from Portal API via 'rwf_get_countries' (status code: " . $countries["code"] . ") in populate_centres_func(). Please re-trigger the function to populate Wordpress from the Portal API.");
          return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -933,7 +933,10 @@ function rwf_gf_members_api_plugin_options() {
       <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-members-api"); ?></h1>
 
       <p>
-         This plugin displays Green Fins member information on pages and posts using shortcodes from the Members API (cached for 4 hours using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_get_"; ?>" target="_new">transients</a>).
+         This plugin displays Green Fins member information within maps, on pages and posts (using shortcodes) from the Assessor Portal via the Members API.
+      </p>
+      <p>
+         Data is cached for 4 hours using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_get_"; ?>" target="_new">transients</a> (enable WP Transients Manager for this link to work). Requires WP Store Locator v2.2.233 or later.
       </p>
       <p>
          <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
@@ -941,10 +944,10 @@ function rwf_gf_members_api_plugin_options() {
       <p>
          Available shortcodes:
          <ul>
-            <li><code>[list_top10members]</code></li>
-            <li><code>[list_top5bycountry country=""]</code></li>
-            <li><code>[list_membersbylocation country="" location=""]</code></li>
-            <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code></li>
+            <li><code>[list_top10members]</code> displays the Top 10 members</li>
+            <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li>
+            <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location. If the location is misspelt then a list of available options will be displayed.</li>
+            <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code> displays the average score meter section for the specified country and location.</li>
          </ul>
       </p>
 
@@ -961,7 +964,6 @@ function rwf_gf_members_api_plugin_options() {
                <input class="" type="text" name="rwf_api_endpoint" value="<?php echo get_option('rwf_api_endpoint'); ?>" />
             </td>
          </tr>
-
          <tr>
             <th scope="row"><label>
                <label><?php _e("API Key:", "rwf-gf-members-api"); ?></label>
