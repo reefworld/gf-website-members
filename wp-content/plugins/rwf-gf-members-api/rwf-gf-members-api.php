@@ -595,7 +595,7 @@ function rwf_gf_populate_members_as_posts_func() {
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in populate_centres_func() via 'rwf_get_countries' (status code: " . $countries["code"] . "). Please re-trigger the function to populate Wordpress from the Portal API.");
+         wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in populate_centres_func() via 'rwf_get_countries' (status code: " . $countries["code"] . "). Please re-trigger the function to populate Wordpress map locations from the Portal API.");
          return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
@@ -622,7 +622,7 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
             delete_transient( $regions_transient_name );
-            wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in populate_centres_func() via 'rwf_get_regionsbycountry_' for " . $country['name'] . ". Please re-trigger the function to populate Wordpress from the Portal API.");
+            wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch regions from Portal API in populate_centres_func() via 'rwf_get_regionsbycountry_' for " . $country['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
@@ -646,7 +646,7 @@ function rwf_gf_populate_members_as_posts_func() {
                // Handle the case when there are no results or the API is malfunctioning
                if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
                   delete_transient( $locations_transient_name );
-                  wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in populate_centres_func() via 'rwf_get_locationsbyregion_' for " . $country['name'] . " and " . $region['name'] . ". Please re-trigger the function to populate Wordpress from the Portal API.");
+                  wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch locations from Portal API in populate_centres_func() via 'rwf_get_locationsbyregion_' for " . $country['name'] . " and " . $region['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
                   return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
                }
 
@@ -672,7 +672,7 @@ function rwf_gf_populate_members_as_posts_func() {
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
             delete_transient( $members_transient_name );
-            wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in populate_centres_func() via 'rwf_get_membersbylocation_' for " . $location['name'] . ". Please re-trigger the function to populate Wordpress from the Portal API.");
+            wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch members from Portal API in populate_centres_func() via 'rwf_get_membersbylocation_' for " . $location['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
             return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
@@ -753,138 +753,15 @@ function rwf_gf_populate_members_as_posts_func() {
       }
       
    }
-   wp_mail("it@reef-world.org", "Success: rwf_gf_populate_members_as_posts_func()", "rwf_gf_populate_members_as_posts_func() ran successfully, the member map positions have been updated");
+   //wp_mail("it@reef-world.org", "Success: rwf_gf_populate_members_as_posts_func()", "rwf_gf_populate_members_as_posts_func() ran successfully, the member map positions have been updated");
+
+   // send heartbeat for status.reef-world.org
+   wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
 
    exit;
 }
 
 
-
-
-
-
-
-
-
-
-
-/**
- * Remove fax and add API ID to the WPSL additional information
- */
-function custom_meta_box_fields( $meta_fields ) {
-    
-    $meta_fields[__( 'Additional Information', 'wpsl' )] = array(
-        'phone' => array(
-            'label' => __( 'Tel', 'wpsl' )
-        ),
-        'email' => array(
-            'label' => __( 'Email', 'wpsl' )
-        ),
-        'url' => array(
-            'label' => __( 'Url', 'wpsl' )
-        ),
-        'api_centre_id' => array(
-            'label' => __( 'Api_Centre_Id', 'wpsl' )
-        ),
-        'api_logo_filename' => array(
-         'label' => __( 'Api_Logo_Filename', 'wpsl' )
-        )
-    );
-
-    return $meta_fields;
-}
-
-/**
- * Hide the start marker
- */
-function custom_js_settings( $settings ) {
-
-    $settings['startMarker'] = '';
-
-    return $settings;
-}
-
-/**
- * Collect the Used Categories to display categories in the map info window (for bronze, silver, gold, top 10)
- */
-function custom_store_meta( $store_meta, $store_id ) {
-    
-    $terms = wp_get_post_terms( $store_id, 'wpsl_store_category' );
-    
-    $store_meta['terms'] = '';
-    
-    if ( $terms ) {
-        if ( !is_wp_error( $terms ) ) {
-            if ( count( $terms ) > 1 ) {
-                $location_terms = array();
-
-                foreach ( $terms as $term ) {
-                    $location_terms[] = $term->name;
-                }
-
-                $store_meta['terms'] = implode( ', ', $location_terms );
-            } else {
-                $store_meta['terms'] = $terms[0]->name;    
-            }
-        }
-    }
-    
-    return $store_meta;
-}
-
-/**
- * Include additional meta data in the JSON response on the front end.
- */
-function custom_frontend_meta_fields( $store_fields ) {
-
-    $store_fields['wpsl_api_logo_filename'] = array( 
-        'name' => 'api_logo_filename' 
-    );
-    
-    return $store_fields;
-}
-
-
-/**
- * Marker Info Window Template with modifications to display the category (for bronze, silver, gold, top 10)
- */
-function custom_info_window_template() {
-   
-   global $wpsl_settings, $wpsl;
-
-   $info_window_template = '<div data-store-id="<%= id %>" class="wpsl-info-window">' . "\r\n";
-   $info_window_template .= "\t\t" . '<p>' . "\r\n";
-   $info_window_template .= "\t\t\t" . '<img src="<%= api_logo_filename %>" alt="Logo for <%= store %>" width="50px"><br>' . "\r\n";
-   $info_window_template .= "\t\t\t" .  wpsl_store_header_template() . "\r\n";  
-   $info_window_template .= "\t\t\t" . '<span><%= address %></span>' . "\r\n";
-   $info_window_template .= "\t\t\t" . '<% if ( address2 ) { %>' . "\r\n";
-   $info_window_template .= "\t\t\t" . '<span><%= address2 %></span>' . "\r\n";
-   $info_window_template .= "\t\t\t" . '<% } %>' . "\r\n";
-   $info_window_template .= "\t\t\t" . '<span>' . wpsl_address_format_placeholders() . '</span>' . "\r\n";
-   $info_window_template .= "\t\t" . '</p>' . "\r\n";
-   
-   // Include the category names.
-   $info_window_template .= "\t\t" . '<% if ( terms ) { %>' . "\r\n";
-   $info_window_template .= "\t\t" . '<p>' . __( 'Categories:', 'wpsl' ) . ' <%= terms %></p>' . "\r\n";
-   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
-   
-
-   $info_window_template .= "\t\t" . '<% if ( phone ) { %>' . "\r\n";
-   $info_window_template .= "\t\t" . '<span><strong>' . esc_html( $wpsl->i18n->get_translation( 'phone_label', __( 'Phone', 'wpsl' ) ) ) . '</strong>: <%= formatPhoneNumber( phone ) %></span>' . "\r\n";
-   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
-   $info_window_template .= "\t\t" . '<% if ( url ) { %>' . "\r\n";
-   $info_window_template .= "\t\t" . '<span><strong>' . esc_html( $wpsl->i18n->get_translation( 'url_label', __( 'Url', 'wpsl' ) ) ) . '</strong>: <a target="_blank" href="<%= url %>"><%= url %></a></span>' . "\r\n";
-   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
-   $info_window_template .= "\t\t" . '<% if ( email ) { %>' . "\r\n";
-   $info_window_template .= "\t\t" . '<span><strong>' . esc_html( $wpsl->i18n->get_translation( 'email_label', __( 'Email', 'wpsl' ) ) ) . '</strong>: <%= formatEmail( email ) %></span>' . "\r\n";
-   $info_window_template .= "\t\t" . '<% } %>' . "\r\n";
-
-
-   $info_window_template .= "\t\t" . '<%= createInfoWindowActions( id ) %>' . "\r\n";
-   $info_window_template .= "\t" . '</div>' . "\r\n";
-   
-   return $info_window_template;
-}
 
 
 
@@ -1026,12 +903,6 @@ function rwf_gf_members_api_init() {
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
 
-   // map filters
-   add_filter( 'wpsl_meta_box_fields', 'custom_meta_box_fields' );
-   add_filter( 'wpsl_js_settings', 'custom_js_settings' );
-   add_filter( 'wpsl_store_meta', 'custom_store_meta', 10, 2 );
-   add_filter( 'wpsl_info_window_template', 'custom_info_window_template' );
-   add_filter( 'wpsl_frontend_meta_fields', 'custom_frontend_meta_fields' );
 }
 add_action( 'init', 'rwf_gf_members_api_init' );
 ?>
