@@ -24,10 +24,10 @@ function list_top10members_func() {
        // Transient expired, refresh the data
 
        $url = get_option('rwf_api_endpoint') . '/top-10-members?key=' . get_option('rwf_api_key');
-       $response = wp_remote_retrieve_body(wp_remote_get($url));
-       $json = json_decode($response, true);
+       $response = wp_remote_get( esc_url_raw($url) );
+       $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-       set_transient( 'rwf_get_top10members', $json, 4 * HOUR_IN_SECONDS );
+       set_transient( 'rwf_get_top10members', $api_response, 4 * HOUR_IN_SECONDS );
        $top10members = get_transient( 'rwf_get_top10members' );
    }
    
@@ -35,7 +35,7 @@ function list_top10members_func() {
    if ( empty($top10members) || $top10members["success"] == 0) {
       delete_transient( 'rwf_get_top10members' );
       wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_top10members_func() via 'rwf_get_top10members'. End user has seen an error message.");
-      return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+      return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
    // We're going to return a grid container.
@@ -86,7 +86,19 @@ CLEARFIX;
 
 
 
+/**
+ * Notify Reef-World of API errors
+ * 
+ * Sends an email to notify when there are website errors
+ */
 
+function notify_rwf_error($calling_function, $calling_subfunction, $api_output) {
+
+
+   wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_top10members_func() via 'rwf_get_top10members'. End user has seen an error message.");
+
+
+}
 
 /**
  * List Top 5 Members by country
@@ -107,17 +119,17 @@ function list_top5bycountry_func( $atts = [] ) {
          // Transient expired, refresh the data
 
          $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-         $response = wp_remote_retrieve_body(wp_remote_get($url));
-         $json = json_decode($response, true);
+         $response = wp_remote_get( esc_url_raw($url) );
+         $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-         set_transient( 'rwf_get_countries', $json, 7 * DAY_IN_SECONDS );
+         set_transient( 'rwf_get_countries', $api_response, 7 * DAY_IN_SECONDS );
          $countries = get_transient( 'rwf_get_countries' );
       }
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in list_top5bycountry_func() via 'rwf_get_countries' (status code: " . $countries["code"] . ") on page " . $get_atts['country'] . ". End user has seen an error message.");
-         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+         wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in list_top5bycountry_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . ". End user has seen an error message.");
+         return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    // lookup the country id by the user specified text
@@ -148,17 +160,17 @@ LIST;
        // Transient expired, refresh the data
 
        $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/top-5-members?key=' . get_option('rwf_api_key');
-       $response = wp_remote_retrieve_body(wp_remote_get($url));
-       $json = json_decode($response, true);
+       $response = wp_remote_get( esc_url_raw($url) );
+       $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-       set_transient( $country_transient_name, $json, 4 * HOUR_IN_SECONDS );
+       set_transient( $country_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
        $top5bycountry = get_transient( $country_transient_name );
    }
    // Handle the case when there are no members or the API is malfunctioning
    if ( empty($top5bycountry) || $top5bycountry["success"] == 0) {
       delete_transient( $country_transient_name );
       wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch country top 5 list from Portal API in list_top5bycountry_func() via 'rwf_get_top5bycountry_' for " . $get_atts['country'] . ". End user has seen an error message.");
-      return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+      return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
    }
 
    // We're going to return a grid container.
@@ -233,17 +245,17 @@ function list_membersbylocation_func( $atts = [] ) {
          // Transient expired, refresh the data
 
          $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-         $response = wp_remote_retrieve_body(wp_remote_get($url));
-         $json = json_decode($response, true);
+         $response = wp_remote_get( esc_url_raw($url) );
+         $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-         set_transient( 'rwf_get_countries', $json, 7 * DAY_IN_SECONDS );
+         set_transient( 'rwf_get_countries', $api_response, 7 * DAY_IN_SECONDS );
          $countries = get_transient( 'rwf_get_countries' );
       }
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in list_membersbylocation_func() via 'rwf_get_countries' (status code: " . $countries["code"] . ") on page " . $get_atts['country'] . " > " . $get_atts['location'] . " > Display average: [" . $get_atts['display_average_score'] .  "]. End user has seen an error message.");
-         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+         wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in list_membersbylocation_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . " > " . $get_atts['location'] . " > Requested to display average? (" . $get_atts['display_average_score'] .  "). End user has seen an error message.");
+         return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    // lookup the country id by the user specified text
@@ -275,17 +287,17 @@ LIST;
          // Transient expired, refresh the data
 
          $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/regions?key=' . get_option('rwf_api_key');
-         $response = wp_remote_retrieve_body(wp_remote_get($url));
-         $json = json_decode($response, true);
+         $response = wp_remote_get( esc_url_raw($url) );
+         $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-         set_transient( $regions_transient_name, $json, 4 * HOUR_IN_SECONDS );
+         set_transient( $regions_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
          $regionsbycountry = get_transient( $regions_transient_name );
       }
       // Handle the case when there are no results or the API is malfunctioning
       if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
          delete_transient( $regions_transient_name );
          wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_membersbylocation_func() via 'rwf_get_regionsbycountry_' for " . $get_atts['country'] . " and " . $get_atts['location'] . ". End user has seen an error message.");
-         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+         return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
 
@@ -300,17 +312,17 @@ LIST;
             // Transient expired, refresh the data
    
             $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
-            $response = wp_remote_retrieve_body(wp_remote_get($url));
-            $json = json_decode($response, true);
+            $response = wp_remote_get( esc_url_raw($url) );
+            $api_response = json_decode( wp_remote_retrieve_body($response), true);
    
-            set_transient( $locations_transient_name, $json, 4 * HOUR_IN_SECONDS );
+            set_transient( $locations_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
             $locationsbyregion = get_transient( $locations_transient_name );
          }
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
             delete_transient( $locations_transient_name );
             wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_membersbylocation_func() via 'rwf_get_locationsbyregion_' for " . $get_atts['country'] . " and " . $get_atts['location'] . ". End user has seen an error message.");
-            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       //flatten
@@ -347,17 +359,17 @@ LIST;
          // Transient expired, refresh the data
 
          $url = get_option('rwf_api_endpoint') . '/locations/' . $locationid . '/members?key=' . get_option('rwf_api_key');
-         $response = wp_remote_retrieve_body(wp_remote_get($url));
-         $json = json_decode($response, true);
+         $response = wp_remote_get( esc_url_raw($url) );
+         $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-         set_transient( $members_transient_name, $json, 4 * HOUR_IN_SECONDS );
+         set_transient( $members_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
          $membersbylocation = get_transient( $members_transient_name );
       }
       // Handle the case when there are no results or the API is malfunctioning
       if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
          delete_transient( $members_transient_name );
          wp_mail("it@reef-world.org", "[Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_membersbylocation_func() via 'rwf_get_membersbylocation_' for" . $get_atts['country'] . " and " . $get_atts['location'] . ". End user has seen an error message.");
-         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+         return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    //figure out what we are outputting
@@ -586,17 +598,17 @@ function rwf_gf_populate_members_as_posts_func() {
          // Transient expired, refresh the data
 
          $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-         $response = wp_remote_retrieve_body(wp_remote_get($url));
-         $json = json_decode($response, true);
+         $response = wp_remote_get( esc_url_raw($url) );
+         $api_response = json_decode( wp_remote_retrieve_body($response), true);
 
-         set_transient( 'rwf_get_countries', $json, 7 * DAY_IN_SECONDS );
+         set_transient( 'rwf_get_countries', $api_response, 7 * DAY_IN_SECONDS );
          $countries = get_transient( 'rwf_get_countries' );
       }
       // Handle the case when there are no countries or the API is malfunctioning
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in populate_centres_func() via 'rwf_get_countries' (status code: " . $countries["code"] . "). Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-         return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+         wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in populate_centres_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . "). Please re-trigger the function to populate Wordpress map locations from the Portal API.");
+         return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
       }
 
    //flatten
@@ -613,17 +625,17 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( false === $regionsbycountry ) {
             // Transient expired, refresh the data
             $url = get_option('rwf_api_endpoint') . '/countries/' . $country['id'] . '/regions?key=' . get_option('rwf_api_key');
-            $response = wp_remote_retrieve_body(wp_remote_get($url));
-            $json = json_decode($response, true);
+            $response = wp_remote_get( esc_url_raw($url) );
+            $api_response = json_decode( wp_remote_retrieve_body($response), true);
    
-            set_transient( $regions_transient_name, $json, 4 * HOUR_IN_SECONDS );
+            set_transient( $regions_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
             $regionsbycountry = get_transient( $regions_transient_name );
          }
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
             delete_transient( $regions_transient_name );
             wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch regions from Portal API in populate_centres_func() via 'rwf_get_regionsbycountry_' for " . $country['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       //flatten
@@ -637,17 +649,17 @@ function rwf_gf_populate_members_as_posts_func() {
                if ( false === $locationsbyregion ) {
                   // Transient expired, refresh the data
                   $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
-                  $response = wp_remote_retrieve_body(wp_remote_get($url));
-                  $json = json_decode($response, true);
+                  $response = wp_remote_get( esc_url_raw($url) );
+                  $api_response = json_decode( wp_remote_retrieve_body($response), true);
          
-                  set_transient( $locations_transient_name, $json, 4 * HOUR_IN_SECONDS );
+                  set_transient( $locations_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
                   $locationsbyregion = get_transient( $locations_transient_name );
                }
                // Handle the case when there are no results or the API is malfunctioning
                if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
                   delete_transient( $locations_transient_name );
                   wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch locations from Portal API in populate_centres_func() via 'rwf_get_locationsbyregion_' for " . $country['name'] . " and " . $region['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-                  return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+                  return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
                }
 
             //flatten
@@ -663,17 +675,17 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( false === $membersbylocation ) {
             // Transient expired, refresh the data
             $url = get_option('rwf_api_endpoint') . '/locations/' . $location['id'] . '/members?key=' . get_option('rwf_api_key');
-            $response = wp_remote_retrieve_body(wp_remote_get($url));
-            $json = json_decode($response, true);
+            $response = wp_remote_get( esc_url_raw($url) );
+            $api_response = json_decode( wp_remote_retrieve_body($response), true);
    
-            set_transient( $members_transient_name, $json, 4 * HOUR_IN_SECONDS );
+            set_transient( $members_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
             $membersbylocation = get_transient( $members_transient_name );
          }
          // Handle the case when there are no results or the API is malfunctioning
          if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
             delete_transient( $members_transient_name );
             wp_mail("it@reef-world.org", "[Alert] API sync error on Green Fins Website", "Error: Unable to fetch members from Portal API in populate_centres_func() via 'rwf_get_membersbylocation_' for " . $location['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-            return "<strong>" . __("Error: Unable to fetch data – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
+            return "<strong>" . __("Sorry, the website was unable to update this listing – please refresh this page.", 'rwf-gf-members-api') . "</strong>";
          }
 
       // Flatten
