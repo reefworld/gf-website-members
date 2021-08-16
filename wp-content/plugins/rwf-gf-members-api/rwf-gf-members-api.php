@@ -504,10 +504,13 @@ SCORE;
                   
                      <p class="status">$member[status]</p>
                      <p class="industry">$member[industry]</p>
-                     <p><strong>Address:</strong> $member[address1], $member[address2], $member[address3]</p>
+                     <p><strong>Address:</strong></p>
+                        <p class="contact-item">$member[address1]</p>
+                        <p class="contact-item">$member[address2]</p>
+                        <p class="contact-item">$member[address3]</p>
                      <p class="contact">Contact info:</p>
-                     <p class="contact-item">$member[email]</p>
-                     <p class="contact-item">$member[telephone]</p>
+                        <p class="contact-item">$member[email]</p>
+                        <p class="contact-item">$member[telephone]</p>
                </div>
 
             </div>
@@ -539,10 +542,13 @@ CLEARFIX;
                   
                      <p class="status">$member[status]</p>
                      <p class="industry">$member[industry]</p>
-                     <p><strong>Address:</strong> $member[address1], $member[address2], $member[address3]</p>
+                     <p><strong>Address:</strong></p>
+                        <p class="contact-item">$member[address1]</p>
+                        <p class="contact-item">$member[address2]</p>
+                        <p class="contact-item">$member[address3]</p>
                      <p class="contact">Contact info:</p>
-                     <p class="contact-item">$member[email]</p>
-                     <p class="contact-item">$member[telephone]</p>
+                        <p class="contact-item">$member[email]</p>
+                        <p class="contact-item">$member[telephone]</p>
                </div>
 
             </div>
