@@ -571,12 +571,30 @@ CLEARFIXI;
 
 
 
+/**
+ * Increase the CURL connection timeout limits in development
+ *
+ * 
+ */
+if (WP_CONTENT_URL != "https://greenfins.net/wp-content") {
+   add_action('http_api_curl', 'sar_custom_curl_timeout', 9999, 1);
+   function sar_custom_curl_timeout( $handle ){
+      curl_setopt( $handle, CURLOPT_CONNECTTIMEOUT, 10 ); // 10 seconds. Too much for production, only for testing.
+      curl_setopt( $handle, CURLOPT_TIMEOUT, 10 ); // 10 seconds. Too much for production, only for testing.
+   }
+}
 
-
-
-
-
-
+/**
+ * Logging Helper Function
+ *
+ * 
+ */
+function rwf_write_log($log_entry) {
+       $log_file_path =  plugin_dir_path( __FILE__ ).'logs/rwf-gf-members-api.log.'.date('Y-m-d').'.txt';
+       $log_file = fopen($log_file_path, "a");
+       fwrite($log_file, date('Y-m-d H:i:s'). ' : ' .$log_entry. PHP_EOL);
+       fclose($log_file);
+}
 
 /**
  * Populate members into posts and post meta, the tricky bit is updating the existing records after building an array.
@@ -584,8 +602,19 @@ CLEARFIXI;
  * Love this
  */
 function rwf_gf_populate_members_as_posts_func() {
+   //timing how long it takes to execute
+   $start_microtime = microtime(true);
+   $start_nonce = "id:" . crc32($start_microtime);
+   $member_logo_updated_count = 0;
+   rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] started");
 
-   //load the countries list
+   // Include dependencies needed later - we are looping and running outside the context of /wp-admin/ 
+   require_once(ABSPATH . 'wp-admin/includes/file.php');
+   $member_logo_filepath = ABSPATH . 'wp-content/gf-member-logos/';
+   $existing_member_logos = scandir($member_logo_filepath);
+
+
+   // Load the countries list
    $countries = get_transient( 'rwf_get_countries' );
       if ( false === $countries ) {
          // Transient expired, refresh the data
@@ -601,13 +630,13 @@ function rwf_gf_populate_members_as_posts_func() {
       if ( empty($countries) || $countries["success"] == 0) {
          delete_transient( 'rwf_get_countries' );
          wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in populate_centres_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . "). Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-         return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
+         return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
       }
 
-   //flatten
+   // Flatten
    $countries = $countries['data'];
 
-   //declare empty arrays for use later
+   // Declare empty arrays for use later
    $regions = [];
    $locations = [];
    $members = [];
@@ -628,12 +657,12 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
             delete_transient( $regions_transient_name );
             wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch regions from Portal API in populate_centres_func() via 'rwf_get_regionsbycountry_' (error message: " . $response->get_error_message() . ") for " . $country['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-            return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
+            return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
          }
 
-      //flatten
+      // Flatten
       $regionsbycountry = $regionsbycountry['data'];
-      //append the new locations onto any existing to build the array with each loop
+      // Append the new locations onto any existing to build the array with each loop
       //$regions = array_merge($regions, $regionsbycountry);
 
          foreach ( $regionsbycountry as $region ){
@@ -652,12 +681,12 @@ function rwf_gf_populate_members_as_posts_func() {
                if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
                   delete_transient( $locations_transient_name );
                   wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch locations from Portal API in populate_centres_func() via 'rwf_get_locationsbyregion_' (error message: " . $response->get_error_message() . ") for " . $country['name'] . " and " . $region['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-                  return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
+                  return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
                }
 
-            //flatten
+            // Flatten
             $locationsbyregion = $locationsbyregion['data'];
-            //append the new locations onto any existing to build the array with each loop
+            // Append the new locations onto any existing to build the array with each loop
             $locations = array_merge($locations, $locationsbyregion);
          }
    }
@@ -678,7 +707,7 @@ function rwf_gf_populate_members_as_posts_func() {
          if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
             delete_transient( $members_transient_name );
             wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch members from Portal API in populate_centres_func() via 'rwf_get_membersbylocation_' (error message: " . $response->get_error_message() . ") for " . $location['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-            return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
+            return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
          }
 
       // Flatten
@@ -708,7 +737,7 @@ function rwf_gf_populate_members_as_posts_func() {
       if ( $member['status'] == 'active') {
          $post_status = 'publish';
       } else {
-         $post_status = 'hidden';
+         $post_status = 'pending';
       }
 
       if($wpsl_post_exists){
@@ -733,11 +762,32 @@ function rwf_gf_populate_members_as_posts_func() {
 
       $post_id = wp_insert_post( $post );
 
-      // add or update the post meta with the member's info
       if ( $post_id ) {
+         // Add or update the post meta with the member's info and fetch a local copy of the logo
+
+         // Set file destination.
+         $member_logo_basename = basename($member['logofilename']);
+
+         if (!in_array($member_logo_basename, $existing_member_logos)){ // also covers off default.jpg
+            // Not an existing image, so lets fetch it
+            $tmp_file = download_url( $member['logofilename'] );
+
+            // If error storing temporarily, return the error.
+            if ( is_wp_error( $tmp_file ) ) {
+               rwf_write_log( "rwf_gf_populate_members_as_posts_func() [".$start_nonce."] error – Unable to download: " . $member['logofilename'] . " with error " . $tmp_file->get_error_message());
+            }
+            else {
+               // Copy the file to the final destination and delete temporary file.
+               copy( $tmp_file, $member_logo_filepath . $member_logo_basename);
+               $member_logo_updated_count++;
+            }
+            @unlink( $tmp_file );
+         }
+
+         // Build the array for the store post meta
          $postmetas = array (
             'api_centre_id'      => $member['id'],
-            'api_logo_filename'  => $member['logofilename'],
+            'api_logo_filename'  => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
             'address'            => $member['address1'],
             'address2'           => $member['address2'],
             'city'               => $member['address3'],
@@ -756,13 +806,14 @@ function rwf_gf_populate_members_as_posts_func() {
             }
          }
       }
-      
    }
-   //wp_mail("it@reef-world.org", "Success: rwf_gf_populate_members_as_posts_func()", "rwf_gf_populate_members_as_posts_func() ran successfully, the member map positions have been updated");
 
-   // send heartbeat for status.reef-world.org
-   wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
+   if (WP_CONTENT_URL == "https://greenfins.net/wp-content") {
+      // We are on production so send heartbeat for status.reef-world.org
+      wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
+   }
 
+   rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_logo_updated_count . " logo(s) updated)");
    exit;
 }
 
@@ -904,10 +955,15 @@ function rwf_gf_members_api_init() {
    }
    add_action( 'rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
 
+   //so that we can manually trigger the function without needing WP Crontrol to be installed
+   add_shortcode( 'trigger_rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
+
+   //used throughout the find-a-member pages
    add_shortcode( "list_top10members", "list_top10members_func" );
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
 
 }
 add_action( 'init', 'rwf_gf_members_api_init' );
+
 ?>
