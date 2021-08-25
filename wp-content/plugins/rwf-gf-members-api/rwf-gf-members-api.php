@@ -646,7 +646,7 @@ function rwf_gf_members_api_plugin_options() {
          <ul>
             <li><code>[list_top10members]</code> displays the Top 10 members</li>
             <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li>
-            <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location. If the location is misspelt then a list of available options will be displayed.</li>
+            <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location.</li>
             <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code> displays the average score meter section for the specified country and location.</li>
          </ul>
       </p>
@@ -685,7 +685,7 @@ function rwf_gf_members_api_plugin_options() {
          <p>Manually sync: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_populate_members_as_posts">rwf_gf_populate_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> )</p>
 
       <h1>Debug Log</h2>
-            <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong> (as at server time: <strong><?php echo date('H:i:s'); ?></strong>). To see logs for previous days please look in the /logs/ folder. </p>
+            <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong> (as at server time: <strong><?php echo date('H:i:s'); ?> UTC</strong>). To see logs for previous days please look in the /logs/ folder. </p>
 
       <div id="debug-log" style="margin-top: 20px; padding: 10px 20px; height: 500px; width: 90%; overflow-y: scroll; background: #fff;">
          <pre><?php 

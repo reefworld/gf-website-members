@@ -3,7 +3,7 @@ Contributors: James Greenhalgh
 Donate link: https://reef-world.org/donate
 Tags: api, reef-world, greenfins
 Requires at least: 4.7
-Tested up to: 5.5
+Tested up to: 5.8
 Stable tag: trunk
 Requires PHP: 7.0
 License: GPLv2 or later
@@ -26,8 +26,3 @@ Send key as "key" post or get data
 * https://portal-dev.greenfins.net/api/v1/regions/{region_id}/locations
 * https://portal-dev.greenfins.net/api/v1/locations/{location_id}/members
 * https://portal-dev.greenfins.net/api/v1/members/{member_id}/last-assessment
-
-== Changelog ==
-
-= 0.1 =
-* Initial development version
