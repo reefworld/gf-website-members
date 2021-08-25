@@ -19,32 +19,31 @@ defined( 'ABSPATH' ) or die( 'No script kiddies please' );
  */
 function list_top10members_func() {
 
-   $top10members = get_transient( 'rwf_get_top10members' );
-   if ( false === $top10members ) {
-       // Transient expired, refresh the data
-
-       $url = get_option('rwf_api_endpoint') . '/top-10-members?key=' . get_option('rwf_api_key');
-       $response = wp_remote_get( esc_url_raw($url) );
-       $api_response = json_decode( wp_remote_retrieve_body($response), true);
-
-       set_transient( 'rwf_get_top10members', $api_response, 4 * HOUR_IN_SECONDS );
-       $top10members = get_transient( 'rwf_get_top10members' );
-   }
-   
-   // Handle the case when there are no members or the API is malfunctioning
-   if ( empty($top10members) || $top10members["success"] == 0) {
-      delete_transient( 'rwf_get_top10members' );
-      wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_top10members_func() via 'rwf_get_top10members' (error message: " . $response->get_error_message() . "). End user has seen an error message.");
-      return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-   }
+   // Fetch top-10-members category
+   // Requires the category to be set and a sort value ('wpsl_top_10_member_sort') set in the Top 10 tab on the store page
+   $args = array(
+      'numberposts'  => 10,
+      'post_type'    => 'wpsl_stores',
+      'post_status'  => array('publish', 'pending', 'draft'),
+      'meta_key'     => 'wpsl_top_10_member_sort',
+      'orderby'      => 'meta_value_num',
+      'order'        => 'ASC',
+      'tax_query'    => array(
+         array(
+             'taxonomy' => 'wpsl_store_category',
+             'field'    => 'slug',
+             'terms'    => 'top-10-member'
+         ),
+     ),
+   );
+   $top_10_members = new WP_Query( $args );
 
    // We're going to return a grid container.
    $return = "<div class=\"grid-container\">";
 
    // Loop over the returned members
-   $count = 1;
    $i = 0;
-   foreach( $top10members['data'] as $member ) {
+   foreach( $top_10_members->posts as $key => $top_10_member ) {
       $i++;
 
       // Add a list item for each member to the string
@@ -52,26 +51,28 @@ function list_top10members_func() {
          <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
             <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                  <img src="$member[logofilename]">
+                  <img src="$top_10_member->wpsl_api_logo_filename">
             </div>
 
             <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
                <h2>
-                  <span class="count">$count</span><a target="_blank" href="$member[website]">$member[name]</a>
+                  <span class="count">$top_10_member->wpsl_top_10_member_sort</span><a target="_blank" href="$top_10_member->wpsl_url">$top_10_member->post_title</a>
                </h2>
-               <p class="industry">$member[industry]</p>
-               <p class="description">$member[location_name], $member[region_name], <strong>$member[country_name]</strong></p>
+               <p class="industry">$top_10_member->wpsl_industry</p>
+               <p class="description">$top_10_member->wpsl_city</p>
+               <p>$top_10_member->wpsl_state, <strong>$top_10_member->wpsl_country</strong></p>
+
             </div>
 
          </div>
-LISTING;
+      LISTING;
+
          if( 3 == $i ) {
             $i = 0;
             $return .= <<<CLEARFIX
-            <div class="clear"></div>
-CLEARFIX;
+               <div class="clear"></div>
+            CLEARFIX;
          }
-      $count++;
    }
 
    $return .= "</div>";
@@ -93,114 +94,18 @@ CLEARFIX;
  * Outputs a list of the top 5 members for a given country from the Portal API, cached for 4 hours using WP transients
  */
 function list_top5bycountry_func( $atts = [] ) {
-   // override default attributes with user attributes
+   // Override default attributes with user attributes
    $get_atts = shortcode_atts(
       array(
          'country' => 'Please specify a valid country to display the top 5 list'
       ), $atts
    );
 
-   //load the countries list
-   $countries = get_transient( 'rwf_get_countries' );
-      if ( false === $countries ) {
-         // Transient expired, refresh the data
+/*
+ * @todo: re-write this function pulling the latest score, will require making another API call. Also abstract the top10 grid container into its own function and reuse here.
+*/
 
-         $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-         $response = wp_remote_get( esc_url_raw($url) );
-         $api_response = json_decode( wp_remote_retrieve_body($response), true);
-
-         set_transient( 'rwf_get_countries', $api_response, 7 * DAY_IN_SECONDS );
-         $countries = get_transient( 'rwf_get_countries' );
-      }
-      // Handle the case when there are no countries or the API is malfunctioning
-      if ( empty($countries) || $countries["success"] == 0) {
-         delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in list_top5bycountry_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . ". End user has seen an error message.");
-         return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-      }
-
-   // lookup the country id by the user specified text
-   $countries = $countries['data'];
-   $countryinput = $get_atts['country'];
-   $result = array_column($countries,"id","name");
-   if(isset($result[$countryinput])){
-      $countryid = $result[$countryinput];
-   }
-
-   // Handle the case where an invalid option is supplied
-   if(!isset($countryid)) {
-      $list = "<ul>";
-      foreach( $countries as $country ) {
-         $list .= <<<LIST
-         <li>
-               $country[name]
-         </li>
-LIST;
-      }
-      $list .= "</ul>";
-      return "<strong>" . __("Error: Invalid country specified, please check your spelling to dispay list_top5bycountry. The options are:", 'rwf-gf-members-api') . $list . "</strong>";
-   }
-   
-   $country_transient_name = 'rwf_get_top5bycountry_' . $countryinput;
-   $top5bycountry = get_transient( $country_transient_name );
-   if ( false === $top5bycountry ) {
-       // Transient expired, refresh the data
-
-       $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/top-5-members?key=' . get_option('rwf_api_key');
-       $response = wp_remote_get( esc_url_raw($url) );
-       $api_response = json_decode( wp_remote_retrieve_body($response), true);
-
-       set_transient( $country_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-       $top5bycountry = get_transient( $country_transient_name );
-   }
-   // Handle the case when there are no members or the API is malfunctioning
-   if ( empty($top5bycountry) || $top5bycountry["success"] == 0) {
-      delete_transient( $country_transient_name );
-      wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch country top 5 list from Portal API in list_top5bycountry_func() via 'rwf_get_top5bycountry_' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . ". End user has seen an error message.");
-      return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-   }
-
-   // We're going to return a grid container.
-   $return = "<div class=\"grid-container\">";
-
-   // Loop over the returned members
-   $count = 1;
-   $i = 0;
-   foreach( $top5bycountry['data'] as $member ) {
-      $i++;
-
-      // Add a list item for each member to the string
-      $return .= <<<LISTING
-         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
-
-            <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                  <img src="$member[logofilename]">
-            </div>
-
-            <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-               <h2>
-                  <span class="count">$count</span><a target="_blank" href="$member[website]">$member[name]</a>
-               </h2>
-               <p class="industry">$member[industry]</p>
-               <p class="description">$member[location_name], $member[region_name]</strong></p>
-            </div>
-
-         </div>
-LISTING;
-         if( 3 == $i ) {
-            $i = 0;
-            $return .= <<<CLEARFIX
-            <div class="clear"></div>
-CLEARFIX;
-         }
-      $count++;
-   }
-
-   // Close the div
-   $return .= "</div>";
-
-   return $return;
-
+   return null;
 }
 
 
@@ -217,7 +122,7 @@ CLEARFIX;
  * Outputs a list of members or the average score for a given location from the Portal API, cached for 4 hours using WP transients
  */
 function list_membersbylocation_func( $atts = [] ) {
-   // override default attributes with user attributes
+   // Override default attributes with user attributes
    $get_atts = shortcode_atts(
       array(
          'country' => 'Please specify a valid country & location to display the members list',
@@ -226,147 +131,44 @@ function list_membersbylocation_func( $atts = [] ) {
       ), $atts
    );
 
-   //load the countries list
-   $countries = get_transient( 'rwf_get_countries' );
-      if ( false === $countries ) {
-         // Transient expired, refresh the data
+   // Fetch members by country and location 
+   $args = array(
+      'numberposts'  => -1,
+      'post_type'    => 'wpsl_stores',
+      'post_status'  => array('publish', 'pending', 'draft'),
+      'order'        => 'ASC',
+      'meta_query'   => array(
+         'relation' => 'AND',
+         array(
+               'key'     => 'wpsl_country',
+               'value'   => $get_atts['country'],
+         ),
+         array(
+            'key'     => 'wpsl_city',
+            'value'   => $get_atts['location'],
+         ),
+         'membership_status' => array(
+            'key'     => 'wpsl_api_membership_status',
+            'value'   => array('active', 'inactive'),
+         ),
+      ),
+      'orderby' => array( 
+         'membership_status' => 'ASC'
+   ),
+   );
+   $members = new WP_Query( $args );
 
-         $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-         $response = wp_remote_get( esc_url_raw($url) );
-         $api_response = json_decode( wp_remote_retrieve_body($response), true);
+   // Figure out what we are outputting
 
-         set_transient( 'rwf_get_countries', $api_response, 7 * DAY_IN_SECONDS );
-         $countries = get_transient( 'rwf_get_countries' );
-      }
-      // Handle the case when there are no countries or the API is malfunctioning
-      if ( empty($countries) || $countries["success"] == 0) {
-         delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in list_membersbylocation_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . " > " . $get_atts['location'] . " > Requested to display average? (" . $get_atts['display_average_score'] .  "). End user has seen an error message.");
-         return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-      }
-
-   // lookup the country id by the user specified text
-   $countries = $countries['data'];
-   $countryinput = $get_atts['country'];
-   $result = array_column($countries,"id","name");
-
-   if(isset($result[$countryinput])){
-      $countryid = $result[$countryinput];
+   if (!$members->have_posts()) {
+      return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-members-api');
    }
-
-   // Handle the case where an invalid option is supplied
-   if(!isset($countryid)) {
-      $list = "<ul>";
-      foreach( $countries as $country ) {
-         $list .= <<<LIST
-         <li>
-               $country[name]
-         </li>
-LIST;
-      }
-      $list .= "</ul>";
-      return "<strong>" . __("Error: Invalid country specified, please check your country spelling to display list_membersbylocation. The options are:", 'rwf-gf-members-api') . $list . "</strong>";
-   }
-   
-   $regions_transient_name = 'rwf_get_regionsbycountry_' . $countryinput;
-   $regionsbycountry = get_transient( $regions_transient_name );
-      if ( false === $regionsbycountry ) {
-         // Transient expired, refresh the data
-
-         $url = get_option('rwf_api_endpoint') . '/countries/' . $countryid . '/regions?key=' . get_option('rwf_api_key');
-         $response = wp_remote_get( esc_url_raw($url) );
-         $api_response = json_decode( wp_remote_retrieve_body($response), true);
-
-         set_transient( $regions_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-         $regionsbycountry = get_transient( $regions_transient_name );
-      }
-      // Handle the case when there are no results or the API is malfunctioning
-      if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
-         delete_transient( $regions_transient_name );
-         wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_membersbylocation_func() via 'rwf_get_regionsbycountry_' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . " and " . $get_atts['location'] . ". End user has seen an error message.");
-         return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-      }
-
-
-   // build an array of the locations in all of the specified country's regions
-   $regionsbycountry = $regionsbycountry['data'];
-   $locations = [];
-
-   foreach ( $regionsbycountry as $region ){
-      $locations_transient_name = 'rwf_get_locationsbyregion_' . $countryinput . '_' . $region['name']; //we need this level of verbosity because there are region name collisions
-      $locationsbyregion = get_transient( $locations_transient_name );
-         if ( false === $locationsbyregion ) {
-            // Transient expired, refresh the data
-   
-            $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
-            $response = wp_remote_get( esc_url_raw($url) );
-            $api_response = json_decode( wp_remote_retrieve_body($response), true);
-   
-            set_transient( $locations_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-            $locationsbyregion = get_transient( $locations_transient_name );
-         }
-         // Handle the case when there are no results or the API is malfunctioning
-         if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
-            delete_transient( $locations_transient_name );
-            wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_membersbylocation_func() via 'rwf_get_locationsbyregion_' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . " and " . $get_atts['location'] . ". End user has seen an error message.");
-            return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-         }
-
-      //flatten
-      $locationsbyregion = $locationsbyregion['data'];
-      //append the new locations onto any existing to build the array with each loop
-      $locations = array_merge($locations, $locationsbyregion);
-   }
-
-   $results = array_column($locations,"id","name");
-   $location_input = $get_atts['location'];
-
-   if(isset($results[$location_input])){
-      $locationid = $results[$location_input];
-   }
-
-   // Handle the case where an invalid option is supplied
-   if(!isset($locationid)) {
-      $list = "<ul>";
-      foreach( $locations as $location ) {
-         $list .= <<<LIST
-         <li>
-               $location[name]
-         </li>
-LIST;
-      }
-      $list .= "</ul>";
-      return "<strong>" . __("Error: Invalid location specified, please check your location spelling to display list_membersbylocation. The options are:", 'rwf-gf-members-api') . $list . "</strong>";
-   }
-
-
-   $members_transient_name = 'rwf_get_membersbylocation_' . $location_input;
-   $membersbylocation = get_transient( $members_transient_name );
-      if ( false === $membersbylocation ) {
-         // Transient expired, refresh the data
-
-         $url = get_option('rwf_api_endpoint') . '/locations/' . $locationid . '/members?key=' . get_option('rwf_api_key');
-         $response = wp_remote_get( esc_url_raw($url) );
-         $api_response = json_decode( wp_remote_retrieve_body($response), true);
-
-         set_transient( $members_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-         $membersbylocation = get_transient( $members_transient_name );
-      }
-      // Handle the case when there are no results or the API is malfunctioning
-      if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
-         delete_transient( $members_transient_name );
-         wp_mail("it@reef-world.org", "[Website Alert] Error on Green Fins Website", "Error: Unable to fetch data from Portal API in list_membersbylocation_func() via 'rwf_get_membersbylocation_' (error message: " . $response->get_error_message() . ") on page " . $get_atts['country'] . " and " . $get_atts['location'] . ". End user has seen an error message.");
-         return __("Sorry, the website was unable to update this listing – <strong>please refresh this page to try again</strong>. <br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-      }
-
-   //figure out what we are outputting
-   $display_average_score = $get_atts['display_average_score'];
-   if($display_average_score){
-
-      $average_lookup = array_column($locations,"average","name");
-   
-      if(isset($average_lookup[$location_input])){
-         $average_score = round($average_lookup[$location_input]);
+   elseif( $get_atts['display_average_score'] ){
+      // We are going to return an average score section
+      $average_lookup = get_transient( 'rwf_get_averagescore_' . $get_atts['country'] . "_" . $get_atts['location'] );
+      
+      if(isset($average_lookup)){
+         $average_score = round($average_lookup);
          $average_score_percent = 100 - ($average_score / 330 * 100); //We want a zero score to fill the progress bar
 
          if ($average_score < 28) {
@@ -381,186 +183,196 @@ LIST;
       }
 
       $return = <<<SCORE
-
-      <div class="gb-container gb-container-f07c0c81"><div class="gb-inside-container"></div></div>
-
-
-
-<div class="gb-container gb-container-a57dea89 gf-section-average-score"><div class="gb-inside-container">
-<h1 class="gb-headline gb-headline-a284ca0f">Average Score</h1>
-
-
-
-<p>This is the average environmental performance score of members in this location</p>
-
-         <h2 class="gf-score">$average_score</h2>
-         <div class="gf-score-meter">
-            <span class="gf-score-$average_score_style" style="width: $average_score_percent%"></span>
+         <div class="gb-container gb-container-f07c0c81">
+            <div class="gb-inside-container"></div>
          </div>
 
-         <div class="gb-container gb-container-d429c552"><div class="gb-inside-container">
-         <div class="gb-grid-wrapper gb-grid-wrapper-e77d8655">
-         <div class="gb-grid-column gb-grid-column-fe72985d"><div class="gb-container gb-container-fe72985d"><div class="gb-inside-container"></div></div></div>
-         
-         
-         
-         <div class="gb-grid-column gb-grid-column-34fb67fb"><div class="gb-container gb-container-34fb67fb"><div class="gb-inside-container">
-         <h2 class="gb-headline gb-headline-90c84c3a">330</h2>
-         
-         
-         
-         <h2 class="gb-headline gb-headline-c96e550c">Poor Environmental Performance</h2>
-         </div></div></div>
-         
-         
-         
-         <div class="gb-grid-column gb-grid-column-12f58e34"><div class="gb-container gb-container-12f58e34"><div class="gb-inside-container">
-         <h2 class="gb-headline gb-headline-46b7cf1b">165</h2>
-         
-         
-         
-         <h2 class="gb-headline gb-headline-ff77cb36">Needs Improvement</h2>
-         </div></div></div>
-         
-         
-         
-         <div class="gb-grid-column gb-grid-column-39cfbbb8"><div class="gb-container gb-container-39cfbbb8"><div class="gb-inside-container">
-         <h2 class="gb-headline gb-headline-0f99cdfd">0</h2>
-         
-         
-         
-         <h2 class="gb-headline gb-headline-d7236770">Great Environmental Performance</h2>
-         </div></div></div>
-         
-         
-         
-         <div class="gb-grid-column gb-grid-column-8ce327e6"><div class="gb-container gb-container-8ce327e6"><div class="gb-inside-container"></div></div></div>
-         </div>
-         </div></div>
-         
-         
-         
-         <p>Annually, Green Fins members have their environmental performance evaluated by trained assessors. Each assessment results in a score based on a traffic light rating system for how well risks to the environment are managed. The lower the score, the better the environmental performance. Each member’s score is confidential and continued membership is based on ongoing improvement.</p>
-         
-         
-         
-         <div class="gb-container gb-container-e88999f6"><div class="gb-inside-container">
-         <div class="gb-grid-wrapper gb-grid-wrapper-d80d1d7a">
-         <div class="gb-grid-column gb-grid-column-e0f04d97"><div class="gb-container gb-container-e0f04d97"><div class="gb-inside-container">
-         <h2 class="gb-headline gb-headline-8040ba89">Active</h2>
-         
-         
-         
-         <p>A member that has been assessed within the last 18 months and successfully reduced their environmental impact.</p>
-         </div></div></div>
-         
-         
-         
-         <div class="gb-grid-column gb-grid-column-f3d10a1f"><div class="gb-container gb-container-f3d10a1f"><div class="gb-inside-container">
-         <h2 class="gb-headline gb-headline-5a18dd14">Inactive</h2>
-         
-         
-         
-         <p>A member who was previously active but has not had an assessment to verify their environmental impact in the last 18 months.</p>
-         </div></div></div>
-         
-         
-         
-         <div class="gb-grid-column gb-grid-column-db558dc6"><div class="gb-container gb-container-db558dc6"><div class="gb-inside-container">
-         <h2 class="gb-headline gb-headline-040888e5">Suspended</h2>
-         
-         
-         
-         <p>A member that has not managed to reduce their threat to the marine environment or has been involved in an activity that is seen as seriously detrimental to the marine environment. Suspended members are not listed.</p>
-         </div></div></div>
-         </div>
-         </div></div>
-         </div></div>
-         <div class="gb-container gb-container-19322339"><div class="gb-inside-container"></div></div>
 
-SCORE;
+
+         <div class="gb-container gb-container-a57dea89 gf-section-average-score">
+            <div class="gb-inside-container">
+               <h1 class="gb-headline gb-headline-a284ca0f">Average Score: $average_score</h1>
+
+
+
+               <p>This is the average environmental performance score of members in $atts_location</p>
+
+               <div class="gf-score-meter">
+                     <span class="gf-score-$average_score_style" style="width: $average_score_percent%"></span>
+               </div>
+
+               <div class="gb-container gb-container-d429c552">
+                     <div class="gb-inside-container">
+                        <div class="gb-grid-wrapper gb-grid-wrapper-e77d8655">
+                           <div class="gb-grid-column gb-grid-column-fe72985d">
+                                 <div class="gb-container gb-container-fe72985d">
+                                    <div class="gb-inside-container"></div>
+                                 </div>
+                           </div>
+
+
+
+                           <div class="gb-grid-column gb-grid-column-34fb67fb">
+                                 <div class="gb-container gb-container-34fb67fb">
+                                    <div class="gb-inside-container">
+                                       <h2 class="gb-headline gb-headline-90c84c3a">330</h2>
+
+
+
+                                       <h2 class="gb-headline gb-headline-c96e550c">Poor Environmental Performance</h2>
+                                    </div>
+                                 </div>
+                           </div>
+
+
+
+                           <div class="gb-grid-column gb-grid-column-12f58e34">
+                                 <div class="gb-container gb-container-12f58e34">
+                                    <div class="gb-inside-container">
+                                       <h2 class="gb-headline gb-headline-46b7cf1b">165</h2>
+
+
+
+                                       <h2 class="gb-headline gb-headline-ff77cb36">Needs Improvement</h2>
+                                    </div>
+                                 </div>
+                           </div>
+
+
+
+                           <div class="gb-grid-column gb-grid-column-39cfbbb8">
+                                 <div class="gb-container gb-container-39cfbbb8">
+                                    <div class="gb-inside-container">
+                                       <h2 class="gb-headline gb-headline-0f99cdfd">0</h2>
+
+
+
+                                       <h2 class="gb-headline gb-headline-d7236770">Great Environmental Performance</h2>
+                                    </div>
+                                 </div>
+                           </div>
+
+
+
+                           <div class="gb-grid-column gb-grid-column-8ce327e6">
+                                 <div class="gb-container gb-container-8ce327e6">
+                                    <div class="gb-inside-container"></div>
+                                 </div>
+                           </div>
+                        </div>
+                     </div>
+               </div>
+
+
+
+               <p>Annually, Green Fins members have their environmental performance evaluated by trained assessors. Each
+                     assessment results in a score based on a traffic light rating system for how well risks to the environment
+                     are managed. The lower the score, the better the environmental performance. Each member’s score is
+                     confidential and continued membership is based on ongoing improvement.</p>
+
+
+
+               <div class="gb-container gb-container-e88999f6">
+                     <div class="gb-inside-container">
+                        <div class="gb-grid-wrapper gb-grid-wrapper-d80d1d7a">
+                           <div class="gb-grid-column gb-grid-column-e0f04d97">
+                                 <div class="gb-container gb-container-e0f04d97">
+                                    <div class="gb-inside-container">
+                                       <h2 class="gb-headline gb-headline-8040ba89">Active</h2>
+
+
+
+                                       <p>A member that has been assessed within the last 18 months and successfully reduced
+                                             their environmental impact.</p>
+                                    </div>
+                                 </div>
+                           </div>
+
+
+
+                           <div class="gb-grid-column gb-grid-column-f3d10a1f">
+                                 <div class="gb-container gb-container-f3d10a1f">
+                                    <div class="gb-inside-container">
+                                       <h2 class="gb-headline gb-headline-5a18dd14">Inactive</h2>
+
+
+
+                                       <p>A member who was previously active but has not had an assessment to verify their
+                                             environmental impact in the last 18 months.</p>
+                                    </div>
+                                 </div>
+                           </div>
+
+
+
+                           <div class="gb-grid-column gb-grid-column-db558dc6">
+                                 <div class="gb-container gb-container-db558dc6">
+                                    <div class="gb-inside-container">
+                                       <h2 class="gb-headline gb-headline-040888e5">Suspended</h2>
+
+
+
+                                       <p>A member that has not managed to reduce their threat to the marine environment or has
+                                             been involved in an activity that is seen as seriously detrimental to the marine
+                                             environment. Suspended members are not listed.</p>
+                                    </div>
+                                 </div>
+                           </div>
+                        </div>
+                     </div>
+               </div>
+            </div>
+         </div>
+         <div class="gb-container gb-container-19322339">
+            <div class="gb-inside-container"></div>
+         </div>
+
+      SCORE;
    }
    else {
    // We're going to return a grid container.
+
    $return = "<div class=\"grid-container\">";
 
    $i = 0;
       // Loop over the returned members
-      foreach( $membersbylocation['data'] as $member ) {
-         if($member['status'] == 'active') {
+      foreach( $members->posts as $key => $member ) {
+
             $i++;
             // Add a list item for each member to the string
             $return .= <<<LISTING
-            <div class="gf-centre-listing gf-member-$member[status] gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
+               <div class="gf-centre-listing gf-member-$member->wpsl_api_membership_status gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
-               <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                     <img src="$member[logofilename]">
+                  <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                        <img src="$member->wpsl_api_logo_filename">
+                  </div>
+
+                  <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+                     <h2>
+                        <a target="_blank" href="$member->wpsl_url">$member->post_title</a>
+                     </h2>
+                     
+                     <p class="industry">$member->wpsl_api_industry</p>
+                     <p class="status">$member->wpsl_api_membership_status</p>
+                        <p><strong>Address:</strong></p>
+                           <p class="contact-item">$member->wpsl_address</p>
+                           <p class="contact-item">$member->wpsl_address2</p>
+                        <p class="contact">Contact info:</p>
+                           <p class="contact-item">$member->wpsl_email</p>
+                           <p class="contact-item">$member->wpsl_phone</p>
+                  </div>
+
                </div>
+            LISTING;
 
-               <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-                  <h2>
-                     <a target="_blank" href="$member[website]">$member[name]</a>
-                  </h2>
-                  
-                     <p class="status">$member[status]</p>
-                     <p class="industry">$member[industry]</p>
-                     <p><strong>Address:</strong></p>
-                        <p class="contact-item">$member[address1]</p>
-                        <p class="contact-item">$member[address2]</p>
-                        <p class="contact-item">$member[address3]</p>
-                     <p class="contact">Contact info:</p>
-                        <p class="contact-item">$member[email]</p>
-                        <p class="contact-item">$member[telephone]</p>
-               </div>
-
-            </div>
-LISTING;
-         }
          if( 3 == $i ) {
             $i = 0;
             $return .= <<<CLEARFIX
-            <div class="clear"></div>
-CLEARFIX;
+               <div class="clear"></div>
+            CLEARFIX;
          }
       }
-
-      foreach( $membersbylocation['data'] as $member ) {
-         if($member['status'] == 'inactive') {
-            $i++;
-            // Add a list item for each member to the string
-            $return .= <<<LISTINGI
-            <div class="gf-centre-listing gf-member-$member[status] gf-clickable-container grid-parent grid-33 tablet-grid-50 mobile-grid-100">
-
-               <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                     <img src="$member[logofilename]">
-               </div>
-
-               <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-                  <h2>
-                     <a target="_blank" href="$member[website]">$member[name]</a>
-                  </h2>
-                  
-                     <p class="status">$member[status]</p>
-                     <p class="industry">$member[industry]</p>
-                     <p><strong>Address:</strong></p>
-                        <p class="contact-item">$member[address1]</p>
-                        <p class="contact-item">$member[address2]</p>
-                        <p class="contact-item">$member[address3]</p>
-                     <p class="contact">Contact info:</p>
-                        <p class="contact-item">$member[email]</p>
-                        <p class="contact-item">$member[telephone]</p>
-               </div>
-
-            </div>
-LISTINGI;
-         }
-         if( 3 == $i ) {
-            $i = 0;
-            $return .= <<<CLEARFIXI
-            <div class="clear"></div>
-CLEARFIXI;
-         }
-      }
+      
       // Close the div
       $return .= "</div>";
    }
@@ -571,18 +383,7 @@ CLEARFIXI;
 
 
 
-/**
- * Increase the CURL connection timeout limits in development
- *
- * 
- */
-if (WP_CONTENT_URL != "https://greenfins.net/wp-content") {
-   add_action('http_api_curl', 'sar_custom_curl_timeout', 9999, 1);
-   function sar_custom_curl_timeout( $handle ){
-      curl_setopt( $handle, CURLOPT_CONNECTTIMEOUT, 10 ); // 10 seconds. Too much for production, only for testing.
-      curl_setopt( $handle, CURLOPT_TIMEOUT, 10 ); // 10 seconds. Too much for production, only for testing.
-   }
-}
+
 
 /**
  * Logging Helper Function
@@ -602,9 +403,12 @@ function rwf_write_log($log_entry) {
  * Love this
  */
 function rwf_gf_populate_members_as_posts_func() {
-   //timing how long it takes to execute
+   // Timing how long it takes to execute
    $start_microtime = microtime(true);
    $start_nonce = "id:" . crc32($start_microtime);
+   // For logging output
+   $member_record_created_count = 0;
+   $member_record_updated_count = 0;
    $member_logo_updated_count = 0;
    rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] started");
 
@@ -614,119 +418,66 @@ function rwf_gf_populate_members_as_posts_func() {
    $existing_member_logos = scandir($member_logo_filepath);
 
 
-   // Load the countries list
-   $countries = get_transient( 'rwf_get_countries' );
-      if ( false === $countries ) {
-         // Transient expired, refresh the data
-
-         $url = get_option('rwf_api_endpoint') . '/countries?key=' . get_option('rwf_api_key');
-         $response = wp_remote_get( esc_url_raw($url) );
-         $api_response = json_decode( wp_remote_retrieve_body($response), true);
-
-         set_transient( 'rwf_get_countries', $api_response, 7 * DAY_IN_SECONDS );
-         $countries = get_transient( 'rwf_get_countries' );
-      }
-      // Handle the case when there are no countries or the API is malfunctioning
-      if ( empty($countries) || $countries["success"] == 0) {
-         delete_transient( 'rwf_get_countries' );
-         wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch the countries list from Portal API in populate_centres_func() via 'rwf_get_countries' (error message: " . $response->get_error_message() . "). Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-         return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-      }
-
-   // Flatten
-   $countries = $countries['data'];
-
-   // Declare empty arrays for use later
-   $regions = [];
-   $locations = [];
-   $members = [];
-
-   foreach ( $countries as $country ){
-      $regions_transient_name = 'rwf_get_regionsbycountry_' . $country['name'];
-      $regionsbycountry = get_transient( $regions_transient_name );
-         if ( false === $regionsbycountry ) {
-            // Transient expired, refresh the data
-            $url = get_option('rwf_api_endpoint') . '/countries/' . $country['id'] . '/regions?key=' . get_option('rwf_api_key');
-            $response = wp_remote_get( esc_url_raw($url) );
-            $api_response = json_decode( wp_remote_retrieve_body($response), true);
-   
-            set_transient( $regions_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-            $regionsbycountry = get_transient( $regions_transient_name );
-         }
-         // Handle the case when there are no results or the API is malfunctioning
-         if ( empty($regionsbycountry) || $regionsbycountry["success"] == 0) {
-            delete_transient( $regions_transient_name );
-            wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch regions from Portal API in populate_centres_func() via 'rwf_get_regionsbycountry_' (error message: " . $response->get_error_message() . ") for " . $country['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-            return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
+   function rwf_api_fetch($description, $url, $start_nonce){
+      $response = wp_remote_get( esc_url_raw( get_option('rwf_api_endpoint') . $url ) );
+         // Handle the case when something has been misconfigured
+         if ( is_wp_error($response) ) {
+            rwf_write_log( "rwf_gf_populate_members_as_posts_func() [".$start_nonce."] error – Unable to fetch the " . $description . " (error message: " . $response->get_error_message() . ")" );
+            exit;
          }
 
-      // Flatten
-      $regionsbycountry = $regionsbycountry['data'];
-      // Append the new locations onto any existing to build the array with each loop
-      //$regions = array_merge($regions, $regionsbycountry);
-
-         foreach ( $regionsbycountry as $region ){
-            $locations_transient_name = 'rwf_get_locationsbyregion_' . $country['name'] . '_' . $region['name']; //we need this level of verbosity because there are region name collisions
-            $locationsbyregion = get_transient( $locations_transient_name );
-               if ( false === $locationsbyregion ) {
-                  // Transient expired, refresh the data
-                  $url = get_option('rwf_api_endpoint') . '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
-                  $response = wp_remote_get( esc_url_raw($url) );
-                  $api_response = json_decode( wp_remote_retrieve_body($response), true);
-         
-                  set_transient( $locations_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-                  $locationsbyregion = get_transient( $locations_transient_name );
-               }
-               // Handle the case when there are no results or the API is malfunctioning
-               if ( empty($locationsbyregion) || $locationsbyregion["success"] == 0) {
-                  delete_transient( $locations_transient_name );
-                  wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch locations from Portal API in populate_centres_func() via 'rwf_get_locationsbyregion_' (error message: " . $response->get_error_message() . ") for " . $country['name'] . " and " . $region['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-                  return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-               }
-
-            // Flatten
-            $locationsbyregion = $locationsbyregion['data'];
-            // Append the new locations onto any existing to build the array with each loop
-            $locations = array_merge($locations, $locationsbyregion);
+      $api_response = json_decode( wp_remote_retrieve_body( $response ), true);
+         // Handle the case when the call fails
+         if ( $api_response["success"] == 0) {
+            rwf_write_log( "rwf_gf_populate_members_as_posts_func() [".$start_nonce."] error – Unable to fetch the " . $description . " (error message: " . $api_response["error_message"] . ")" );
+            exit;
          }
+      return $api_response['data'];
    }
 
-   foreach ( $locations as $location ){
-      $members_transient_name = 'rwf_get_membersbylocation_' . $location['name'];
-      $membersbylocation = get_transient( $members_transient_name );
-         if ( false === $membersbylocation ) {
-            // Transient expired, refresh the data
-            $url = get_option('rwf_api_endpoint') . '/locations/' . $location['id'] . '/members?key=' . get_option('rwf_api_key');
-            $response = wp_remote_get( esc_url_raw($url) );
-            $api_response = json_decode( wp_remote_retrieve_body($response), true);
-   
-            set_transient( $members_transient_name, $api_response, 4 * HOUR_IN_SECONDS );
-            $membersbylocation = get_transient( $members_transient_name );
-         }
-         // Handle the case when there are no results or the API is malfunctioning
-         if ( empty($membersbylocation) || $membersbylocation["success"] == 0) {
-            delete_transient( $members_transient_name );
-            wp_mail("it@reef-world.org", "[API Refresh Alert] API sync error on Green Fins Website", "Error: Unable to fetch members from Portal API in populate_centres_func() via 'rwf_get_membersbylocation_' (error message: " . $response->get_error_message() . ") for " . $location['name'] . ". Please re-trigger the function to populate Wordpress map locations from the Portal API.");
-            return __("That didn't work – error message: " . $response->get_error_message() . " <br><br>If this problem continues the site administrator will be notified automatically. <br><br>", 'rwf-gf-members-api');
-         }
+   // Declare empty arrays for use later
+   $members = [];
 
-      // Flatten
-      $membersbylocation = $membersbylocation['data'];
-      // Append the new locations onto any existing to build the array with each loop
-      $members = array_merge($members, $membersbylocation);
+   // Load the countries list
+   $url = '/countries?key=' . get_option('rwf_api_key');
+   $countries = rwf_api_fetch('countries list', $url, $start_nonce);
+
+   foreach ( $countries as $country ){
+      // Load the regions list
+      $url = '/countries/' . $country['id'] . '/regions?key=' . get_option('rwf_api_key');
+      $regionsbycountry = rwf_api_fetch('regions list for ' . $country['guid'], $url, $start_nonce);
+
+      foreach ( $regionsbycountry as $region ){
+         // Load the locations list
+         $url = '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
+         $locationsbyregion = rwf_api_fetch('locations list for ' . $region['guid'], $url, $start_nonce);
+
+         foreach ( $locationsbyregion as $location ){
+            // Persist the location averages as transients so that the average score for each location can be used in other functions (we don't have a good way to store this in WPSL)
+            $transient_name = 'rwf_get_averagescore_' . $country['name'] . "_" . $location['name']; 
+            set_transient( $transient_name, $location['average'], MONTH_IN_SECONDS );
+      
+            // Load the members list
+            $url = '/locations/' . $location['id'] . '/members?key=' . get_option('rwf_api_key');
+            $membersbylocation = rwf_api_fetch('members list for ' . $location['guid'], $url, $start_nonce);
+      
+            // Append the new locations onto any existing to build the array with each loop
+            $members = array_merge($members, $membersbylocation);
+         }
+      }
    }
 
    // We've built the members list, time to make some posts
    // Try to disable the time limit to prevent timeouts.
    @set_time_limit( 0 );
 
-   // seed the database
+   // Seed the database
    foreach ($members as $member){
 
-      //look for existing centre records
+      // Look for existing centre records
       $args = array(
          'post_type' => 'wpsl_stores',
-         'meta_key' => 'wpsl_api_centre_id', //this meta key is created using the wpsl filter custom_meta_box_fields() below
+         'meta_key' => 'wpsl_api_centre_id', // This meta key is created using the wpsl filter custom_meta_box_fields() below
          'meta_value' => $member['id'],
          'post_status' => 'any',
          'posts_per_page' => -1
@@ -748,16 +499,18 @@ function rwf_gf_populate_members_as_posts_func() {
             'post_type'    => 'wpsl_stores',
             'post_status'  => $post_status,
             'post_title'   => $member['name'],
-            'post_content' => $member['industry']              
+            'post_content' => "This record is maintained in the Green Fins Assessor Portal, to edit it please visit https://portal.greenfins.net"
          );
+         $member_record_updated_count++;
       } else {
          // make a new post for the member
          $post = array (
             'post_type'    => 'wpsl_stores',
             'post_status'  => $post_status,
             'post_title'   => $member['name'],
-            'post_content' => $member['industry']              
+            'post_content' => "This record is maintained in the Green Fins Assessor Portal, to edit it please visit https://portal.greenfins.net"
          );
+         $member_record_created_count++;
       }
 
       $post_id = wp_insert_post( $post );
@@ -786,18 +539,20 @@ function rwf_gf_populate_members_as_posts_func() {
 
          // Build the array for the store post meta
          $postmetas = array (
-            'api_centre_id'      => $member['id'],
-            'api_logo_filename'  => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
-            'address'            => $member['address1'],
-            'address2'           => $member['address2'],
-            'city'               => $member['address3'],
-            'state'              => $member['region_name'],
-            'country'            => $member['country_name'],
-            'lat'                => $member['lat'],
-            'lng'                => $member['lng'],
-            'phone'              => $member['telephone'],
-            'url'                => $member['website'],
-            'email'              => $member['email']            
+            'api_centre_id'         => $member['id'],
+            'api_logo_filename'     => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
+            'api_industry'          => $member['industry'],      
+            'api_membership_status' => $member['status'],
+            'address'               => $member['address1'],
+            'address2'              => $member['address2'],
+            'city'                  => $member['location_name'],
+            'state'                 => $member['region_name'],
+            'country'               => $member['country_name'],
+            'lat'                   => $member['lat'],
+            'lng'                   => $member['lng'],
+            'phone'                 => $member['telephone'],
+            'url'                   => $member['website'],
+            'email'                 => $member['email']            
          );
 
          foreach ( $postmetas as $meta => $value ) {
@@ -813,7 +568,7 @@ function rwf_gf_populate_members_as_posts_func() {
       wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
    }
 
-   rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_logo_updated_count . " logo(s) updated)");
+   rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
    exit;
 }
 
@@ -832,12 +587,12 @@ function rwf_gf_populate_members_as_posts_func() {
  * Admin menu for the API key and endpoint management
  */
 function rwf_gf_members_api_plugin_menu_func() {
-   add_submenu_page( "options-general.php",  // Which menu parent
-                  "Green Fins Members API Plugin Settings",            // Page title
-                  "Green Fins Members API",            // Menu title
-                  "manage_options",       // Minimum capability (manage_options is an easy way to target administrators)
-                  "rwf_gf_members_api_plugin",            // Menu slug
-                  "rwf_gf_members_api_plugin_options"     // Callback that prints the markup
+   add_submenu_page( "options-general.php",                    // Which menu parent
+                  "Green Fins Members API Plugin Settings",    // Page title
+                  "Green Fins Members API",                    // Menu title
+                  "manage_options",                            // Minimum capability (manage_options is an easy way to target administrators)
+                  "rwf_gf_members_api_plugin",                 // Menu slug
+                  "rwf_gf_members_api_plugin_options"          // Callback that prints the markup
                );
 }
 
@@ -955,10 +710,10 @@ function rwf_gf_members_api_init() {
    }
    add_action( 'rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
 
-   //so that we can manually trigger the function without needing WP Crontrol to be installed
+   // So that we can manually trigger the function without needing WP Crontrol to be installed
    add_shortcode( 'trigger_rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
 
-   //used throughout the find-a-member pages
+   // Used throughout the find-a-member pages
    add_shortcode( "list_top10members", "list_top10members_func" );
    add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
    add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
