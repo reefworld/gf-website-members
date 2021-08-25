@@ -3,7 +3,7 @@
 Plugin Name: Display Green Fins member info from Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 1.2
+Version: 2.0
 Author: James Greenhalgh
 Author URI: https://www.linkedin.com/in/jgrnh/
 License: GPLv2 or later
@@ -385,17 +385,11 @@ function list_membersbylocation_func( $atts = [] ) {
 
 
 
-/**
- * Logging Helper Function
- *
- * 
- */
-function rwf_write_log($log_entry) {
-       $log_file_path =  plugin_dir_path( __FILE__ ).'logs/rwf-gf-members-api.log.'.date('Y-m-d').'.txt';
-       $log_file = fopen($log_file_path, "a");
-       fwrite($log_file, date('Y-m-d H:i:s'). ' : ' .$log_entry. PHP_EOL);
-       fclose($log_file);
-}
+
+
+
+
+
 
 /**
  * Populate members into posts and post meta, the tricky bit is updating the existing records after building an array.
@@ -403,33 +397,26 @@ function rwf_write_log($log_entry) {
  * Love this
  */
 function rwf_gf_populate_members_as_posts_func() {
-   // Timing how long it takes to execute
+   // For logging output (including timing how long it takes to execute)
    $start_microtime = microtime(true);
-   $start_nonce = "id:" . crc32($start_microtime);
-   // For logging output
+   $trace_id = "id:" . substr( hash( 'adler32', $start_microtime ), -4);
    $member_record_created_count = 0;
    $member_record_updated_count = 0;
    $member_logo_updated_count = 0;
-   rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] started");
+   rwf_write_log( "[" . $trace_id . "] started, please wait" );
 
-   // Include dependencies needed later - we are looping and running outside the context of /wp-admin/ 
-   require_once(ABSPATH . 'wp-admin/includes/file.php');
-   $member_logo_filepath = ABSPATH . 'wp-content/gf-member-logos/';
-   $existing_member_logos = scandir($member_logo_filepath);
-
-
-   function rwf_api_fetch($description, $url, $start_nonce){
+   function rwf_api_fetch($description, $url, $trace_id){
       $response = wp_remote_get( esc_url_raw( get_option('rwf_api_endpoint') . $url ) );
          // Handle the case when something has been misconfigured
-         if ( is_wp_error($response) ) {
-            rwf_write_log( "rwf_gf_populate_members_as_posts_func() [".$start_nonce."] error – Unable to fetch the " . $description . " (error message: " . $response->get_error_message() . ")" );
+         if ( is_wp_error( $response ) ) {
+            rwf_write_log( "[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $response->get_error_message() . ")" );
             exit;
          }
 
       $api_response = json_decode( wp_remote_retrieve_body( $response ), true);
          // Handle the case when the call fails
          if ( $api_response["success"] == 0) {
-            rwf_write_log( "rwf_gf_populate_members_as_posts_func() [".$start_nonce."] error – Unable to fetch the " . $description . " (error message: " . $api_response["error_message"] . ")" );
+            rwf_write_log( "[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $api_response["error_message"] . ")" );
             exit;
          }
       return $api_response['data'];
@@ -440,17 +427,17 @@ function rwf_gf_populate_members_as_posts_func() {
 
    // Load the countries list
    $url = '/countries?key=' . get_option('rwf_api_key');
-   $countries = rwf_api_fetch('countries list', $url, $start_nonce);
+   $countries = rwf_api_fetch('countries list', $url, $trace_id);
 
    foreach ( $countries as $country ){
       // Load the regions list
       $url = '/countries/' . $country['id'] . '/regions?key=' . get_option('rwf_api_key');
-      $regionsbycountry = rwf_api_fetch('regions list for ' . $country['guid'], $url, $start_nonce);
+      $regionsbycountry = rwf_api_fetch('regions list for ' . $country['guid'], $url, $trace_id);
 
       foreach ( $regionsbycountry as $region ){
          // Load the locations list
          $url = '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
-         $locationsbyregion = rwf_api_fetch('locations list for ' . $region['guid'], $url, $start_nonce);
+         $locationsbyregion = rwf_api_fetch('locations list for ' . $region['guid'], $url, $trace_id);
 
          foreach ( $locationsbyregion as $location ){
             // Persist the location averages as transients so that the average score for each location can be used in other functions (we don't have a good way to store this in WPSL)
@@ -459,7 +446,7 @@ function rwf_gf_populate_members_as_posts_func() {
       
             // Load the members list
             $url = '/locations/' . $location['id'] . '/members?key=' . get_option('rwf_api_key');
-            $membersbylocation = rwf_api_fetch('members list for ' . $location['guid'], $url, $start_nonce);
+            $membersbylocation = rwf_api_fetch('members list for ' . $location['guid'], $url, $trace_id);
       
             // Append the new locations onto any existing to build the array with each loop
             $members = array_merge($members, $membersbylocation);
@@ -470,6 +457,11 @@ function rwf_gf_populate_members_as_posts_func() {
    // We've built the members list, time to make some posts
    // Try to disable the time limit to prevent timeouts.
    @set_time_limit( 0 );
+
+   // Include dependencies - we are looping and running outside the context of /wp-admin/ 
+   require_once(ABSPATH . 'wp-admin/includes/file.php');
+   $member_logo_filepath = ABSPATH . 'wp-content/gf-member-logos/';
+   $existing_member_logos = scandir($member_logo_filepath);
 
    // Seed the database
    foreach ($members as $member){
@@ -527,7 +519,7 @@ function rwf_gf_populate_members_as_posts_func() {
 
             // If error storing temporarily, return the error.
             if ( is_wp_error( $tmp_file ) ) {
-               rwf_write_log( "rwf_gf_populate_members_as_posts_func() [".$start_nonce."] error – Unable to download: " . $member['logofilename'] . " with error " . $tmp_file->get_error_message());
+               rwf_write_log( "[" . $trace_id . "] error – Unable to download: " . $member['logofilename'] . " with error " . $tmp_file->get_error_message());
             }
             else {
                // Copy the file to the final destination and delete temporary file.
@@ -568,10 +560,30 @@ function rwf_gf_populate_members_as_posts_func() {
       wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
    }
 
-   rwf_write_log("rwf_gf_populate_members_as_posts_func() [".$start_nonce."] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
+   rwf_write_log( "[" . $trace_id . "] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
    exit;
 }
 
+
+
+
+
+
+
+
+
+
+/**
+ * Logging Helper Function
+ *
+ * 
+ */
+function rwf_write_log($log_entry) {
+   $log_file_path =  plugin_dir_path( __FILE__ ).'logs/rwf-gf-members-api.log.'.date('Y-m-d').'.txt';
+   $log_file = fopen($log_file_path, "a");
+   fwrite($log_file, date('Y-m-d H:i:s'). ' : ' .$log_entry. PHP_EOL);
+   fclose($log_file);
+}
 
 
 
@@ -621,10 +633,10 @@ function rwf_gf_members_api_plugin_options() {
       <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-members-api"); ?></h1>
 
       <p>
-         This plugin displays Green Fins member information within maps, on pages and posts (using shortcodes) from the Assessor Portal via the Members API.
+         This plugin displays Green Fins member information within maps, on pages and posts (using shortcodes).
       </p>
       <p>
-         Data is cached for 4 hours using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_get_"; ?>" target="_new">transients</a> (enable WP Transients Manager for this link to work). Requires WP Store Locator v2.2.233 or later.
+         Data is fetched from the Green Fins Assessor Portal via the Members API and stored in WP Store Locator (requires v2.2.233 or later). Average score information is cached using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_get_"; ?>" target="_new">transients</a> (enable WP Transients Manager for this link to work).
       </p>
       <p>
          <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
@@ -664,8 +676,24 @@ function rwf_gf_members_api_plugin_options() {
 
       <br>
 
-      <input class="button button-primary" type="submit" value="<?php _e("Save", "rwf-gf-members-api"); ?>" />
+      <input class="button button-primary" type="submit" value="<?php _e("Update Plugin Settings", "rwf-gf-members-api"); ?>" />
 
+      <br><br>
+
+      <h1>Trigger</h2>
+         <p>The sync function is configured to run twicedaily. If needed the script may be manually triggered below – please refresh immediately after trigger and wait at least 5 minutes before triggering again.</p>
+         <p>Manually sync: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_populate_members_as_posts">rwf_gf_populate_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> )</p>
+
+      <h1>Debug Log</h2>
+            <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong> (as at server time: <strong><?php echo date('H:i:s'); ?></strong>). To see logs for previous days please look in the /logs/ folder. </p>
+
+      <div id="debug-log" style="margin-top: 20px; padding: 10px 20px; height: 500px; width: 90%; overflow-y: scroll; background: #fff;">
+         <pre><?php 
+            $log_file_path =  plugin_dir_path( __FILE__ ).'logs/rwf-gf-members-api.log.'.date('Y-m-d').'.txt'; 
+            echo file_get_contents( $log_file_path );
+            ?></pre>
+      </div>
+   
    </form>
    <?php
 
@@ -705,13 +733,12 @@ function rwf_gf_members_api_plugin_handle_save() {
 function rwf_gf_members_api_init() {
    add_action( "admin_menu", "rwf_gf_members_api_plugin_menu_func" );
    add_action( 'admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save' );
-   if ( ! wp_next_scheduled( 'rwf_gf_populate_members_as_posts' ) ) {
-      wp_schedule_event( time(), 'twicedaily', 'rwf_gf_populate_members_as_posts' );
+   if ( ! wp_next_scheduled( 'admin_post_trigger_rwf_gf_populate_members_as_posts' ) ) {
+      wp_schedule_event( time(), 'twicedaily', 'admin_post_trigger_rwf_gf_populate_members_as_posts' );
    }
-   add_action( 'rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
 
-   // So that we can manually trigger the function without needing WP Crontrol to be installed
-   add_shortcode( 'trigger_rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
+   // 'admin_post_' allows us to trigger the function from the admin area without needing WP Crontrol to be installed. 
+   add_action( 'admin_post_trigger_rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
 
    // Used throughout the find-a-member pages
    add_shortcode( "list_top10members", "list_top10members_func" );
