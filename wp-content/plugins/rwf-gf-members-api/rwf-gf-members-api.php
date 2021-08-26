@@ -10,14 +10,15 @@ License: GPLv2 or later
 Text Domain: rwf-gf-members-api
 */
 
-defined( 'ABSPATH' ) or die( 'No script kiddies please' );
+defined('ABSPATH') or die('No script kiddies please');
 
 /**
  * List Top 10 Members
  *
  * Outputs a list of the top 10 members from the Portal API, cached for 4 hours using WP transients
  */
-function list_top10members_func() {
+function list_top10members_func()
+{
 
    // Fetch top-10-members category
    // Requires the category to be set and a sort value ('wpsl_top_10_member_sort') set in the Top 10 tab on the store page
@@ -30,20 +31,20 @@ function list_top10members_func() {
       'order'        => 'ASC',
       'tax_query'    => array(
          array(
-             'taxonomy' => 'wpsl_store_category',
-             'field'    => 'slug',
-             'terms'    => 'top-10-member'
+            'taxonomy' => 'wpsl_store_category',
+            'field'    => 'slug',
+            'terms'    => 'top-10-member'
          ),
-     ),
+      ),
    );
-   $top_10_members = new WP_Query( $args );
+   $top_10_members = new WP_Query($args);
 
    // We're going to return a grid container.
    $return = "<div class=\"grid-container\">";
 
    // Loop over the returned members
    $i = 0;
-   foreach( $top_10_members->posts as $key => $top_10_member ) {
+   foreach ($top_10_members->posts as $key => $top_10_member) {
       $i++;
 
       // Add a list item for each member to the string
@@ -67,12 +68,12 @@ function list_top10members_func() {
          </div>
       LISTING;
 
-         if( 3 == $i ) {
-            $i = 0;
-            $return .= <<<CLEARFIX
+      if (3 == $i) {
+         $i = 0;
+         $return .= <<<CLEARFIX
                <div class="clear"></div>
             CLEARFIX;
-         }
+      }
    }
 
    $return .= "</div>";
@@ -93,15 +94,17 @@ function list_top10members_func() {
  *
  * Outputs a list of the top 5 members for a given country from the Portal API, cached for 4 hours using WP transients
  */
-function list_top5bycountry_func( $atts = [] ) {
+function list_top5bycountry_func($atts = [])
+{
    // Override default attributes with user attributes
    $get_atts = shortcode_atts(
       array(
          'country' => 'Please specify a valid country to display the top 5 list'
-      ), $atts
+      ),
+      $atts
    );
 
-/*
+   /*
  * @todo: re-write this function pulling the latest score, will require making another API call. Also abstract the top10 grid container into its own function and reuse here.
 */
 
@@ -121,14 +124,16 @@ function list_top5bycountry_func( $atts = [] ) {
  *
  * Outputs a list of members or the average score for a given location from the Portal API, cached for 4 hours using WP transients
  */
-function list_membersbylocation_func( $atts = [] ) {
+function list_membersbylocation_func($atts = [])
+{
    // Override default attributes with user attributes
    $get_atts = shortcode_atts(
       array(
          'country' => 'Please specify a valid country & location to display the members list',
          'location' => 'Please specify a valid country & location to display the members list',
          'display_average_score' => false
-      ), $atts
+      ),
+      $atts
    );
 
    // Fetch members by country and location 
@@ -140,8 +145,8 @@ function list_membersbylocation_func( $atts = [] ) {
       'meta_query'   => array(
          'relation' => 'AND',
          array(
-               'key'     => 'wpsl_country',
-               'value'   => $get_atts['country'],
+            'key'     => 'wpsl_country',
+            'value'   => $get_atts['country'],
          ),
          array(
             'key'     => 'wpsl_city',
@@ -152,34 +157,33 @@ function list_membersbylocation_func( $atts = [] ) {
             'value'   => array('active', 'inactive'),
          ),
       ),
-      'orderby' => array( 
+      'orderby' => array(
          'membership_status' => 'ASC'
-   ),
+      ),
    );
-   $members = new WP_Query( $args );
+   $members = new WP_Query($args);
 
    // Figure out what we are outputting
 
    if (!$members->have_posts()) {
       return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-members-api');
-   }
-   elseif( $get_atts['display_average_score'] ){
+   } elseif ($get_atts['display_average_score']) {
       // We are going to return an average score section
-      $average_lookup = get_transient( 'rwf_get_averagescore_' . $get_atts['country'] . "_" . $get_atts['location'] );
-      
-      if(isset($average_lookup)){
+      $average_lookup = get_transient('rwf_get_averagescore_' . $get_atts['country'] . "_" . $get_atts['location']);
+
+      if (isset($average_lookup)) {
          $average_score = round($average_lookup);
          $average_score_percent = 100 - ($average_score / 330 * 100); //We want a zero score to fill the progress bar
 
          if ($average_score < 28) {
             $average_score_style = 'lower';
-         }
-         elseif ($average_score < 205) {
+         } elseif ($average_score < 205) {
             $average_score_style = 'middle';
-         }         
-         else {
+         } else {
             $average_score_style = 'upper';
-         }         
+         }
+
+         $atts_location = $get_atts['location']; // Needed inside the HEREDOC
       }
 
       $return = <<<SCORE
@@ -187,15 +191,11 @@ function list_membersbylocation_func( $atts = [] ) {
             <div class="gb-inside-container"></div>
          </div>
 
-
-
          <div class="gb-container gb-container-a57dea89 gf-section-average-score">
             <div class="gb-inside-container">
                <h1 class="gb-headline gb-headline-a284ca0f">Average Score: $average_score</h1>
 
-
-
-               <p>This is the average environmental performance score of members in $atts_location</p>
+               <p>This is the average environmental performance score of members in <strong>$atts_location</strong></p>
 
                <div class="gf-score-meter">
                      <span class="gf-score-$average_score_style" style="width: $average_score_percent%"></span>
@@ -210,8 +210,6 @@ function list_membersbylocation_func( $atts = [] ) {
                                  </div>
                            </div>
 
-
-
                            <div class="gb-grid-column gb-grid-column-34fb67fb">
                                  <div class="gb-container gb-container-34fb67fb">
                                     <div class="gb-inside-container">
@@ -223,8 +221,6 @@ function list_membersbylocation_func( $atts = [] ) {
                                     </div>
                                  </div>
                            </div>
-
-
 
                            <div class="gb-grid-column gb-grid-column-12f58e34">
                                  <div class="gb-container gb-container-12f58e34">
@@ -238,8 +234,6 @@ function list_membersbylocation_func( $atts = [] ) {
                                  </div>
                            </div>
 
-
-
                            <div class="gb-grid-column gb-grid-column-39cfbbb8">
                                  <div class="gb-container gb-container-39cfbbb8">
                                     <div class="gb-inside-container">
@@ -252,8 +246,6 @@ function list_membersbylocation_func( $atts = [] ) {
                                  </div>
                            </div>
 
-
-
                            <div class="gb-grid-column gb-grid-column-8ce327e6">
                                  <div class="gb-container gb-container-8ce327e6">
                                     <div class="gb-inside-container"></div>
@@ -263,14 +255,10 @@ function list_membersbylocation_func( $atts = [] ) {
                      </div>
                </div>
 
-
-
                <p>Annually, Green Fins members have their environmental performance evaluated by trained assessors. Each
                      assessment results in a score based on a traffic light rating system for how well risks to the environment
                      are managed. The lower the score, the better the environmental performance. Each member’s score is
                      confidential and continued membership is based on ongoing improvement.</p>
-
-
 
                <div class="gb-container gb-container-e88999f6">
                      <div class="gb-inside-container">
@@ -280,22 +268,16 @@ function list_membersbylocation_func( $atts = [] ) {
                                     <div class="gb-inside-container">
                                        <h2 class="gb-headline gb-headline-8040ba89">Active</h2>
 
-
-
                                        <p>A member that has been assessed within the last 18 months and successfully reduced
                                              their environmental impact.</p>
                                     </div>
                                  </div>
                            </div>
 
-
-
                            <div class="gb-grid-column gb-grid-column-f3d10a1f">
                                  <div class="gb-container gb-container-f3d10a1f">
                                     <div class="gb-inside-container">
                                        <h2 class="gb-headline gb-headline-5a18dd14">Inactive</h2>
-
-
 
                                        <p>A member who was previously active but has not had an assessment to verify their
                                              environmental impact in the last 18 months.</p>
@@ -303,14 +285,10 @@ function list_membersbylocation_func( $atts = [] ) {
                                  </div>
                            </div>
 
-
-
                            <div class="gb-grid-column gb-grid-column-db558dc6">
                                  <div class="gb-container gb-container-db558dc6">
                                     <div class="gb-inside-container">
                                        <h2 class="gb-headline gb-headline-040888e5">Suspended</h2>
-
-
 
                                        <p>A member that has not managed to reduce their threat to the marine environment or has
                                              been involved in an activity that is seen as seriously detrimental to the marine
@@ -328,19 +306,18 @@ function list_membersbylocation_func( $atts = [] ) {
          </div>
 
       SCORE;
-   }
-   else {
-   // We're going to return a grid container.
+   } else {
+      // We're going to return a grid container.
 
-   $return = "<div class=\"grid-container\">";
+      $return = "<div class=\"grid-container\">";
 
-   $i = 0;
+      $i = 0;
       // Loop over the returned members
-      foreach( $members->posts as $key => $member ) {
+      foreach ($members->posts as $key => $member) {
 
-            $i++;
-            // Add a list item for each member to the string
-            $return .= <<<LISTING
+         $i++;
+         // Add a list item for each member to the string
+         $return .= <<<LISTING
                <div class="gf-centre-listing gf-member-$member->wpsl_api_membership_status gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
                   <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
@@ -365,20 +342,19 @@ function list_membersbylocation_func( $atts = [] ) {
                </div>
             LISTING;
 
-         if( 3 == $i ) {
+         if (3 == $i) {
             $i = 0;
             $return .= <<<CLEARFIX
                <div class="clear"></div>
             CLEARFIX;
          }
       }
-      
+
       // Close the div
       $return .= "</div>";
    }
 
    return $return;
-
 }
 
 
@@ -396,29 +372,31 @@ function list_membersbylocation_func( $atts = [] ) {
  *
  * Love this
  */
-function rwf_gf_populate_members_as_posts_func() {
+function rwf_gf_populate_members_as_posts_func()
+{
    // For logging output (including timing how long it takes to execute)
    $start_microtime = microtime(true);
-   $trace_id = "id:" . substr( hash( 'adler32', $start_microtime ), -4);
+   $trace_id = "id:" . substr(hash('adler32', $start_microtime), -4);
    $member_record_created_count = 0;
    $member_record_updated_count = 0;
    $member_logo_updated_count = 0;
-   rwf_write_log( "[" . $trace_id . "] started, please wait" );
+   rwf_write_log("[" . $trace_id . "] started, please wait");
 
-   function rwf_api_fetch($description, $url, $trace_id){
-      $response = wp_remote_get( esc_url_raw( get_option('rwf_api_endpoint') . $url ) );
-         // Handle the case when something has been misconfigured
-         if ( is_wp_error( $response ) ) {
-            rwf_write_log( "[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $response->get_error_message() . ")" );
-            exit;
-         }
+   function rwf_api_fetch($description, $url, $trace_id)
+   {
+      $response = wp_remote_get(esc_url_raw(get_option('rwf_api_endpoint') . $url));
+      // Handle the case when something has been misconfigured
+      if (is_wp_error($response)) {
+         rwf_write_log("[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $response->get_error_message() . ")");
+         exit;
+      }
 
-      $api_response = json_decode( wp_remote_retrieve_body( $response ), true);
-         // Handle the case when the call fails
-         if ( $api_response["success"] == 0) {
-            rwf_write_log( "[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $api_response["error_message"] . ")" );
-            exit;
-         }
+      $api_response = json_decode(wp_remote_retrieve_body($response), true);
+      // Handle the case when the call fails
+      if ($api_response["success"] == 0) {
+         rwf_write_log("[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $api_response["error_message"] . ")");
+         exit;
+      }
       return $api_response['data'];
    }
 
@@ -429,25 +407,25 @@ function rwf_gf_populate_members_as_posts_func() {
    $url = '/countries?key=' . get_option('rwf_api_key');
    $countries = rwf_api_fetch('countries list', $url, $trace_id);
 
-   foreach ( $countries as $country ){
+   foreach ($countries as $country) {
       // Load the regions list
       $url = '/countries/' . $country['id'] . '/regions?key=' . get_option('rwf_api_key');
       $regionsbycountry = rwf_api_fetch('regions list for ' . $country['guid'], $url, $trace_id);
 
-      foreach ( $regionsbycountry as $region ){
+      foreach ($regionsbycountry as $region) {
          // Load the locations list
          $url = '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_api_key');
          $locationsbyregion = rwf_api_fetch('locations list for ' . $region['guid'], $url, $trace_id);
 
-         foreach ( $locationsbyregion as $location ){
+         foreach ($locationsbyregion as $location) {
             // Persist the location averages as transients so that the average score for each location can be used in other functions (we don't have a good way to store this in WPSL)
-            $transient_name = 'rwf_get_averagescore_' . $country['name'] . "_" . $location['name']; 
-            set_transient( $transient_name, $location['average'], MONTH_IN_SECONDS );
-      
+            $transient_name = 'rwf_get_averagescore_' . $country['name'] . "_" . $location['name'];
+            set_transient($transient_name, $location['average'], MONTH_IN_SECONDS);
+
             // Load the members list
             $url = '/locations/' . $location['id'] . '/members?key=' . get_option('rwf_api_key');
             $membersbylocation = rwf_api_fetch('members list for ' . $location['guid'], $url, $trace_id);
-      
+
             // Append the new locations onto any existing to build the array with each loop
             $members = array_merge($members, $membersbylocation);
          }
@@ -456,7 +434,7 @@ function rwf_gf_populate_members_as_posts_func() {
 
    // We've built the members list, time to make some posts
    // Try to disable the time limit to prevent timeouts.
-   @set_time_limit( 0 );
+   @set_time_limit(0);
 
    // Include dependencies - we are looping and running outside the context of /wp-admin/ 
    require_once(ABSPATH . 'wp-admin/includes/file.php');
@@ -464,7 +442,7 @@ function rwf_gf_populate_members_as_posts_func() {
    $existing_member_logos = scandir($member_logo_filepath);
 
    // Seed the database
-   foreach ($members as $member){
+   foreach ($members as $member) {
 
       // Look for existing centre records
       $args = array(
@@ -473,20 +451,20 @@ function rwf_gf_populate_members_as_posts_func() {
          'meta_value' => $member['id'],
          'post_status' => 'any',
          'posts_per_page' => -1
-         );
+      );
       $wpsl_post_exists = get_posts($args);
 
       // Make sure we set the correct post status.
-      if ( $member['status'] == 'active') {
+      if ($member['status'] == 'active') {
          $post_status = 'publish';
       } else {
          $post_status = 'pending';
       }
 
-      if($wpsl_post_exists){
+      if ($wpsl_post_exists) {
          // update the existing member record
          $wpsl_post_id = $wpsl_post_exists[0]->ID;
-         $post = array (
+         $post = array(
             'ID'           => $wpsl_post_id,
             'post_type'    => 'wpsl_stores',
             'post_status'  => $post_status,
@@ -496,7 +474,7 @@ function rwf_gf_populate_members_as_posts_func() {
          $member_record_updated_count++;
       } else {
          // make a new post for the member
-         $post = array (
+         $post = array(
             'post_type'    => 'wpsl_stores',
             'post_status'  => $post_status,
             'post_title'   => $member['name'],
@@ -505,35 +483,34 @@ function rwf_gf_populate_members_as_posts_func() {
          $member_record_created_count++;
       }
 
-      $post_id = wp_insert_post( $post );
+      $post_id = wp_insert_post($post);
 
-      if ( $post_id ) {
+      if ($post_id) {
          // Add or update the post meta with the member's info and fetch a local copy of the logo
 
          // Set file destination.
          $member_logo_basename = basename($member['logofilename']);
 
-         if (!in_array($member_logo_basename, $existing_member_logos)){ // also covers off default.jpg
+         if (!in_array($member_logo_basename, $existing_member_logos)) { // also covers off default.jpg
             // Not an existing image, so lets fetch it
-            $tmp_file = download_url( $member['logofilename'] );
+            $tmp_file = download_url($member['logofilename']);
 
             // If error storing temporarily, return the error.
-            if ( is_wp_error( $tmp_file ) ) {
-               rwf_write_log( "[" . $trace_id . "] error – Unable to download: " . $member['logofilename'] . " with error " . $tmp_file->get_error_message());
-            }
-            else {
+            if (is_wp_error($tmp_file)) {
+               rwf_write_log("[" . $trace_id . "] error – Unable to download: " . $member['logofilename'] . " with error " . $tmp_file->get_error_message());
+            } else {
                // Copy the file to the final destination and delete temporary file.
-               copy( $tmp_file, $member_logo_filepath . $member_logo_basename);
+               copy($tmp_file, $member_logo_filepath . $member_logo_basename);
                $member_logo_updated_count++;
             }
-            @unlink( $tmp_file );
+            @unlink($tmp_file);
          }
 
          // Build the array for the store post meta
-         $postmetas = array (
+         $postmetas = array(
             'api_centre_id'         => $member['id'],
             'api_logo_filename'     => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
-            'api_industry'          => $member['industry'],      
+            'api_industry'          => $member['industry'],
             'api_membership_status' => $member['status'],
             'address'               => $member['address1'],
             'address2'              => $member['address2'],
@@ -544,12 +521,12 @@ function rwf_gf_populate_members_as_posts_func() {
             'lng'                   => $member['lng'],
             'phone'                 => $member['telephone'],
             'url'                   => $member['website'],
-            'email'                 => $member['email']            
+            'email'                 => $member['email']
          );
 
-         foreach ( $postmetas as $meta => $value ) {
-            if ( isset( $value ) && !empty( $value ) ) {
-               update_post_meta( $post_id, 'wpsl_' . $meta, $value );
+         foreach ($postmetas as $meta => $value) {
+            if (isset($value) && !empty($value)) {
+               update_post_meta($post_id, 'wpsl_' . $meta, $value);
             }
          }
       }
@@ -560,7 +537,7 @@ function rwf_gf_populate_members_as_posts_func() {
       wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
    }
 
-   rwf_write_log( "[" . $trace_id . "] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
+   rwf_write_log("[" . $trace_id . "] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
    exit;
 }
 
@@ -578,10 +555,11 @@ function rwf_gf_populate_members_as_posts_func() {
  *
  * 
  */
-function rwf_write_log($log_entry) {
-   $log_file_path =  plugin_dir_path( __FILE__ ).'logs/rwf-gf-members-api.log.'.date('Y-m-d').'.txt';
+function rwf_write_log($log_entry)
+{
+   $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-members-api.log.' . date('Y-m-d') . '.txt';
    $log_file = fopen($log_file_path, "a");
-   fwrite($log_file, date('Y-m-d H:i:s'). ' : ' .$log_entry. PHP_EOL);
+   fwrite($log_file, date('Y-m-d H:i:s') . ' : ' . $log_entry . PHP_EOL);
    fclose($log_file);
 }
 
@@ -598,35 +576,38 @@ function rwf_write_log($log_entry) {
 /**
  * Admin menu for the API key and endpoint management
  */
-function rwf_gf_members_api_plugin_menu_func() {
-   add_submenu_page( "options-general.php",                    // Which menu parent
-                  "Green Fins Members API Plugin Settings",    // Page title
-                  "Green Fins Members API",                    // Menu title
-                  "manage_options",                            // Minimum capability (manage_options is an easy way to target administrators)
-                  "rwf_gf_members_api_plugin",                 // Menu slug
-                  "rwf_gf_members_api_plugin_options"          // Callback that prints the markup
-               );
+function rwf_gf_members_api_plugin_menu_func()
+{
+   add_submenu_page(
+      "options-general.php",                    // Which menu parent
+      "Green Fins Members API Plugin Settings",    // Page title
+      "Green Fins Members API",                    // Menu title
+      "manage_options",                            // Minimum capability (manage_options is an easy way to target administrators)
+      "rwf_gf_members_api_plugin",                 // Menu slug
+      "rwf_gf_members_api_plugin_options"          // Callback that prints the markup
+   );
 }
 
 // Print the markup for the page
-function rwf_gf_members_api_plugin_options() {
-   if ( !current_user_can( "manage_options" ) )  {
-      wp_die( __( "You do not have sufficient permissions to access this page." ) );
+function rwf_gf_members_api_plugin_options()
+{
+   if (!current_user_can("manage_options")) {
+      wp_die(__("You do not have sufficient permissions to access this page."));
    }
 
-   if ( isset($_GET['status']) && $_GET['status']=='success') { 
-      ?>
-         <div id="message" class="updated notice is-dismissible">
-            <p><?php _e("Settings updated!", "rwf-gf-members-api"); ?></p>
-            <button type="button" class="notice-dismiss">
-               <span class="screen-reader-text"><?php _e("Dismiss this notice.", "rwf-gf-members-api"); ?></span>
-            </button>
-         </div>
-      <?php
+   if (isset($_GET['status']) && $_GET['status'] == 'success') {
+?>
+      <div id="message" class="updated notice is-dismissible">
+         <p><?php _e("Settings updated!", "rwf-gf-members-api"); ?></p>
+         <button type="button" class="notice-dismiss">
+            <span class="screen-reader-text"><?php _e("Dismiss this notice.", "rwf-gf-members-api"); ?></span>
+         </button>
+      </div>
+   <?php
    }
 
    ?>
-   <form method="post" action="<?php echo admin_url( 'admin-post.php'); ?>">
+   <form method="post" action="<?php echo admin_url('admin-post.php'); ?>">
 
       <input type="hidden" name="action" value="update_rwf_gf_members_api_plugin_settings" />
 
@@ -643,12 +624,12 @@ function rwf_gf_members_api_plugin_options() {
       </p>
       <p>
          Available shortcodes:
-         <ul>
-            <li><code>[list_top10members]</code> displays the Top 10 members</li>
-            <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li>
-            <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location.</li>
-            <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code> displays the average score meter section for the specified country and location.</li>
-         </ul>
+      <ul>
+         <li><code>[list_top10members]</code> displays the Top 10 members</li>
+         <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li>
+         <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location.</li>
+         <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code> displays the average score meter section for the specified country and location.</li>
+      </ul>
       </p>
 
       <br>
@@ -658,7 +639,7 @@ function rwf_gf_members_api_plugin_options() {
       <table class="form-table" role="presentation">
          <tr>
             <th scope="row"><label>
-               <?php _e("API Endpoint:", "rwf-gf-members-api"); ?></label>
+                  <?php _e("API Endpoint:", "rwf-gf-members-api"); ?></label>
             </th>
             <td>
                <input class="" type="text" name="rwf_api_endpoint" value="<?php echo get_option('rwf_api_endpoint'); ?>" />
@@ -666,7 +647,7 @@ function rwf_gf_members_api_plugin_options() {
          </tr>
          <tr>
             <th scope="row"><label>
-               <label><?php _e("API Key:", "rwf-gf-members-api"); ?></label>
+                  <label><?php _e("API Key:", "rwf-gf-members-api"); ?></label>
             </th>
             <td>
                <input class="" type="text" name="rwf_api_key" value="<?php echo get_option('rwf_api_key'); ?>" />
@@ -678,74 +659,82 @@ function rwf_gf_members_api_plugin_options() {
 
       <input class="button button-primary" type="submit" value="<?php _e("Update Plugin Settings", "rwf-gf-members-api"); ?>" />
 
-      <br><br>
+   </form>
 
-      <h1>Trigger</h2>
-         <p>The sync function is configured to run twicedaily. If needed the script may be manually triggered below – please refresh immediately after trigger and wait at least 5 minutes before triggering again.</p>
-         <p>Manually sync: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_populate_members_as_posts">rwf_gf_populate_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> )</p>
+   <br><br>
+
+   <h1>Trigger</h2>
+      <p>The refresh function is configured to run twicedaily – if needed the script may be manually triggered below. <span style="color:red">Please refresh the log immediately after a manual trigger and wait at least 5 minutes before triggering again.</span></p>
+      <div style="border: 1px solid #ccc; padding: 0 20px; width: 90%;">
+         <p>Next refresh is scheduled for: <strong>
+               <?php
+               $var = wp_get_scheduled_event("admin_post_trigger_rwf_gf_populate_members_as_posts");
+               echo date('Y-m-d H:i:s', $var->timestamp);
+               ?>
+               UTC</strong> (server time: <strong><?php echo date('H:i:s'); ?> UTC</strong>)</p>
+         <p>Manual refresh: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_populate_members_as_posts">rwf_gf_populate_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> ) </p>
+      </div>
 
       <h1>Debug Log</h2>
-            <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong> (as at server time: <strong><?php echo date('H:i:s'); ?> UTC</strong>). To see logs for previous days please look in the /logs/ folder. </p>
+         <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong>. To see logs for previous days please look in the plugin's /logs/ folder. </p>
+         <div style="margin-top: 20px; padding: 10px 20px; height: 500px; width: 90%; overflow-y: scroll; background: #fff;">
+            <pre><?php
+                  $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-members-api.log.' . date('Y-m-d') . '.txt';
+                  echo file_get_contents($log_file_path);
+                  ?></pre>
+         </div>
 
-      <div id="debug-log" style="margin-top: 20px; padding: 10px 20px; height: 500px; width: 90%; overflow-y: scroll; background: #fff;">
-         <pre><?php 
-            $log_file_path =  plugin_dir_path( __FILE__ ).'logs/rwf-gf-members-api.log.'.date('Y-m-d').'.txt'; 
-            echo file_get_contents( $log_file_path );
-            ?></pre>
-      </div>
-   
-   </form>
-   <?php
-
-}
-
-function rwf_gf_members_api_plugin_handle_save() {
-
-   // Get the options that were sent
-   $key = (!empty($_POST["rwf_api_key"])) ? $_POST["rwf_api_key"] : NULL;
-   $endpoint = (!empty($_POST["rwf_api_endpoint"])) ? $_POST["rwf_api_endpoint"] : NULL;
-
-   // API Validation to go here
-
-   // Update the values
-   update_option( "rwf_api_key", $key, TRUE );
-   update_option( "rwf_api_endpoint", $endpoint, TRUE );
-
-   // Redirect back to settings page
-   $redirect_url = get_bloginfo("url") . "/wp-admin/options-general.php?page=rwf_gf_members_api_plugin&status=success";
-   header("Location: ".$redirect_url);
-   exit;
-}
-
-
-
-
-
-
-
-
-
-
-
-/**
- * Central location to initiate all shortcodes and actions. This ensures that the plugin doesn't hurt page load times.
- */
-function rwf_gf_members_api_init() {
-   add_action( "admin_menu", "rwf_gf_members_api_plugin_menu_func" );
-   add_action( 'admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save' );
-   if ( ! wp_next_scheduled( 'admin_post_trigger_rwf_gf_populate_members_as_posts' ) ) {
-      wp_schedule_event( time(), 'twicedaily', 'admin_post_trigger_rwf_gf_populate_members_as_posts' );
+      <?php
    }
 
-   // 'admin_post_' allows us to trigger the function from the admin area without needing WP Crontrol to be installed. 
-   add_action( 'admin_post_trigger_rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func' );
+   function rwf_gf_members_api_plugin_handle_save()
+   {
 
-   // Used throughout the find-a-member pages
-   add_shortcode( "list_top10members", "list_top10members_func" );
-   add_shortcode( "list_top5bycountry", "list_top5bycountry_func" );
-   add_shortcode( "list_membersbylocation", "list_membersbylocation_func" );
+      // Get the options that were sent
+      $key = (!empty($_POST["rwf_api_key"])) ? $_POST["rwf_api_key"] : NULL;
+      $endpoint = (!empty($_POST["rwf_api_endpoint"])) ? $_POST["rwf_api_endpoint"] : NULL;
 
-}
-add_action( 'init', 'rwf_gf_members_api_init' );
+      // API Validation to go here
 
-?>
+      // Update the values
+      update_option("rwf_api_key", $key, TRUE);
+      update_option("rwf_api_endpoint", $endpoint, TRUE);
+
+      // Redirect back to settings page
+      $redirect_url = get_bloginfo("url") . "/wp-admin/options-general.php?page=rwf_gf_members_api_plugin&status=success";
+      header("Location: " . $redirect_url);
+      exit;
+   }
+
+
+
+
+
+
+
+
+
+
+
+   /**
+    * Central location to initiate all shortcodes and actions. This ensures that the plugin doesn't hurt page load times.
+    */
+   function rwf_gf_members_api_init()
+   {
+      add_action("admin_menu", "rwf_gf_members_api_plugin_menu_func");
+      add_action('admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save');
+      if (!wp_next_scheduled('admin_post_trigger_rwf_gf_populate_members_as_posts')) {
+         wp_schedule_event(time(), 'twicedaily', 'admin_post_trigger_rwf_gf_populate_members_as_posts');
+      }
+
+      // 'admin_post_' allows us to trigger the function from the admin area without needing WP Crontrol to be installed. 
+      add_action('admin_post_trigger_rwf_gf_populate_members_as_posts', 'rwf_gf_populate_members_as_posts_func');
+
+      // Used throughout the find-a-member pages
+      add_shortcode("list_top10members", "list_top10members_func");
+      add_shortcode("list_top5bycountry", "list_top5bycountry_func");
+      add_shortcode("list_membersbylocation", "list_membersbylocation_func");
+   }
+   add_action('init', 'rwf_gf_members_api_init');
+
+      ?>
