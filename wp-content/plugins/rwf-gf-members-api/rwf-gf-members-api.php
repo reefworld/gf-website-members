@@ -61,7 +61,7 @@ function list_top10members_func()
                </h2>
                <p class="industry">$top_10_member->wpsl_industry</p>
                <p class="description">$top_10_member->wpsl_city</p>
-               <p>$top_10_member->wpsl_state, <strong>$top_10_member->wpsl_country</strong></p>
+               <p><strong>$top_10_member->wpsl_country</strong></p>
 
             </div>
 
@@ -315,10 +315,20 @@ function list_membersbylocation_func($atts = [])
       // Loop over the returned members
       foreach ($members->posts as $key => $member) {
 
+         // Not all listings have links
+         if ($member->wpsl_url === 'http://') { 
+            $clean_title = $member->post_title;
+            $clean_url = '';
+         }
+         else {
+            $clean_title = '<a target="_blank" href="' . $member->wpsl_url . '">' . $member->post_title .'</a>';
+            $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $member->wpsl_url ) ,"/");
+         }
+
          $i++;
          // Add a list item for each member to the string
          $return .= <<<LISTING
-               <div class="gf-centre-listing gf-member-$member->wpsl_api_membership_status gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
+               <div class="gf-centre-listing gf-member-$member->wpsl_api_membership_status grid-parent grid-33 tablet-grid-33 mobile-grid-100">
 
                   <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
                         <img src="$member->wpsl_api_logo_filename">
@@ -326,7 +336,7 @@ function list_membersbylocation_func($atts = [])
 
                   <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
                      <h2>
-                        <a target="_blank" href="$member->wpsl_url">$member->post_title</a>
+                        $clean_title
                      </h2>
                      
                      <p class="industry">$member->wpsl_api_industry</p>
@@ -335,8 +345,9 @@ function list_membersbylocation_func($atts = [])
                            <p class="contact-item">$member->wpsl_address</p>
                            <p class="contact-item">$member->wpsl_address2</p>
                         <p class="contact">Contact info:</p>
-                           <p class="contact-item">$member->wpsl_email</p>
-                           <p class="contact-item">$member->wpsl_phone</p>
+                           <p class="contact-item"><a target="_blank" href="$member->wpsl_url">$clean_url</a></p>
+                           <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
+                           <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
                   </div>
 
                </div>
@@ -664,7 +675,7 @@ function rwf_gf_members_api_plugin_options()
    <br><br>
 
    <h1>Trigger</h2>
-      <p>The refresh function is configured to run twicedaily – if needed the script may be manually triggered below. <span style="color:red">Please refresh the log immediately after a manual trigger and wait at least 5 minutes before triggering again.</span></p>
+      <p>The refresh function is configured to run hourly – if needed the script may be manually triggered below. <span style="color:red">Please refresh the log immediately after a manual trigger and wait at least 5 minutes before triggering again.</span></p>
       <div style="border: 1px solid #ccc; padding: 0 20px; width: 90%;">
          <p>Next refresh is scheduled for: <strong>
                <?php
@@ -724,7 +735,7 @@ function rwf_gf_members_api_plugin_options()
       add_action("admin_menu", "rwf_gf_members_api_plugin_menu_func");
       add_action('admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save');
       if (!wp_next_scheduled('admin_post_trigger_rwf_gf_populate_members_as_posts')) {
-         wp_schedule_event(time(), 'twicedaily', 'admin_post_trigger_rwf_gf_populate_members_as_posts');
+         wp_schedule_event(time(), 'hourly', 'admin_post_trigger_rwf_gf_populate_members_as_posts');
       }
 
       // 'admin_post_' allows us to trigger the function from the admin area without needing WP Crontrol to be installed. 
