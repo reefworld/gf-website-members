@@ -49,22 +49,23 @@ function list_top10members_func()
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
-         <div class="gf-centre-listing gf-clickable-container grid-parent grid-33 tablet-grid-33 mobile-grid-100">
+         <div class="grid-33 tablet-grid-33 mobile-grid-100">
+            <section class="gf-centre-listing gf-clickable-container">
+            <div class="grid-container grid-parent">
+               <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                     <img src="$top_10_member->wpsl_api_logo_filename">
+               </div>
 
-            <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                  <img src="$top_10_member->wpsl_api_logo_filename">
-            </div>
-
-            <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-               <h2>
-                  <span class="count">$top_10_member->wpsl_top_10_member_sort</span><a target="_blank" href="$top_10_member->wpsl_url">$top_10_member->post_title</a>
-               </h2>
-               <p class="industry">$top_10_member->wpsl_industry</p>
-               <p class="description">$top_10_member->wpsl_city</p>
-               <p><strong>$top_10_member->wpsl_country</strong></p>
-
-            </div>
-
+               <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+                  <h2>
+                     <span class="count">$top_10_member->wpsl_top_10_member_sort</span><a target="_blank" href="$top_10_member->wpsl_url">$top_10_member->post_title</a>
+                  </h2>
+                  <p class="industry">$top_10_member->wpsl_industry</p>
+                  <p class="description">$top_10_member->wpsl_city</p>
+                  <p><strong>$top_10_member->wpsl_country</strong></p>
+               </div>
+               </div>
+            <section>
          </div>
       LISTING;
 
