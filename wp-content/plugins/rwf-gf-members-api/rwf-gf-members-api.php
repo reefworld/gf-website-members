@@ -136,38 +136,7 @@ function list_membersbylocation_func($atts = [])
       $atts
    );
 
-   // Fetch members by country and location 
-   $args = array(
-      'numberposts'  => -1,
-      'post_type'    => 'wpsl_stores',
-      'post_status'  => array('publish', 'pending', 'draft'),
-      'order'        => 'ASC',
-      'meta_query'   => array(
-         'relation' => 'AND',
-         array(
-            'key'     => 'wpsl_country',
-            'value'   => $get_atts['country'],
-         ),
-         array(
-            'key'     => 'wpsl_city',
-            'value'   => $get_atts['location'],
-         ),
-         'membership_status' => array(
-            'key'     => 'wpsl_api_membership_status',
-            'value'   => array('active', 'inactive'),
-         ),
-      ),
-      'orderby' => array(
-         'membership_status' => 'ASC'
-      ),
-   );
-   $members = new WP_Query($args);
-
-   // Figure out what we are outputting
-
-   if (!$members->have_posts()) {
-      return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-members-api');
-   } elseif ($get_atts['display_average_score']) {
+   if ($get_atts['display_average_score']) {
       // We are going to return an average score section
       $average_lookup = get_transient('rwf_get_averagescore_' . $get_atts['country'] . "_" . $get_atts['location']);
 
@@ -306,63 +275,103 @@ function list_membersbylocation_func($atts = [])
          </div>
 
       SCORE;
+
+      return $return;
+
    } else {
-      // We're going to return a grid container.
+      
+      // Fetch members by country and location 
+      $args = array(
+         'posts_per_page'  => -1,
+         'post_type'    => 'wpsl_stores',
+         'post_status'  => array('publish', 'pending', 'draft'),
+         'order'        => 'ASC',
+         'meta_query'   => array(
+            'relation' => 'AND',
+            array(
+               'key'     => 'wpsl_country',
+               'value'   => $get_atts['country'],
+            ),
+            array(
+               'key'     => 'wpsl_city',
+               'value'   => $get_atts['location'],
+            ),
+            'membership_status' => array(
+               'key'     => 'wpsl_api_membership_status',
+               'value'   => array('active', 'inactive'),
+            ),
+         ),
+         'orderby' => array(
+            'membership_status' => 'ASC'
+         ),
+      );
+      $members = new WP_Query($args);
 
-      $return = "<div class=\"grid-container\">";
+      // Figure out what we are outputting
 
-      $i = 0;
-      // Loop over the returned members
-      foreach ($members->posts as $key => $member) {
+      if (!$members->have_posts()) {
+         return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-members-api');
+      } else {
+         // We're going to return a grid container.
 
-         // Not all listings have links
-         if ($member->wpsl_url === 'http://') { 
-            $clean_title = $member->post_title;
-            $clean_url = '';
-         }
-         else {
-            $clean_title = '<a target="_blank" href="' . $member->wpsl_url . '">' . $member->post_title .'</a>';
-            $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $member->wpsl_url ) ,"/");
-         }
+         $return = "<div class=\"grid-container\">";
 
-         $i++;
-         // Add a list item for each member to the string
-         $return .= <<<LISTING
-               <div class="gf-centre-listing gf-member-$member->wpsl_api_membership_status grid-parent grid-33 tablet-grid-33 mobile-grid-100">
+         $i = 0;
+         // Loop over the returned members
+         foreach ($members->posts as $key => $member) {
 
-                  <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                        <img src="$member->wpsl_api_logo_filename">
+            // Not all listings have links
+            if ($member->wpsl_url === 'http://') { 
+               $clean_title = $member->post_title;
+               $clean_url = '';
+            }
+            else {
+               $clean_title = '<a target="_blank" href="' . $member->wpsl_url . '">' . $member->post_title .'</a>';
+               $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $member->wpsl_url ) ,"/");
+            }
+
+            $i++;
+            // Add a list item for each member to the string
+            $return .= <<<LISTING
+                  <div class="grid-33 tablet-grid-33 mobile-grid-100">
+                     <section class="gf-centre-listing gf-member-$member->wpsl_api_membership_status">
+                        <div class="grid-container grid-parent">
+                           <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
+                                 <img src="$member->wpsl_api_logo_filename">
+                           </div>
+
+                           <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
+                              <h2>
+                                 $clean_title
+                              </h2>
+                              
+                              <p class="industry">$member->wpsl_api_industry</p>
+                              <p class="status">$member->wpsl_api_membership_status</p>
+                                 <p><strong>Address:</strong></p>
+                                    <p class="contact-item">$member->wpsl_address</p>
+                                    <p class="contact-item">$member->wpsl_address2</p>
+                                 <p class="contact">Contact info:</p>
+                                    <p class="contact-item"><a target="_blank" href="$member->wpsl_url">$clean_url</a></p>
+                                    <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
+                                    <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
+                           </div>
+                        </div>
+                     </section>
                   </div>
+               LISTING;
 
-                  <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-                     <h2>
-                        $clean_title
-                     </h2>
-                     
-                     <p class="industry">$member->wpsl_api_industry</p>
-                     <p class="status">$member->wpsl_api_membership_status</p>
-                        <p><strong>Address:</strong></p>
-                           <p class="contact-item">$member->wpsl_address</p>
-                           <p class="contact-item">$member->wpsl_address2</p>
-                        <p class="contact">Contact info:</p>
-                           <p class="contact-item"><a target="_blank" href="$member->wpsl_url">$clean_url</a></p>
-                           <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
-                           <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
-                  </div>
-
-               </div>
-            LISTING;
-
-         if (3 == $i) {
-            $i = 0;
-            $return .= <<<CLEARFIX
-               <div class="clear"></div>
-            CLEARFIX;
+            if (3 == $i) {
+               $i = 0;
+               $return .= <<<CLEARFIX
+                  <div class="clear"></div>
+               CLEARFIX;
+            }
          }
+
+         // Close the div
+         $return .= "</div>";
       }
-
-      // Close the div
-      $return .= "</div>";
+      
    }
 
    return $return;
