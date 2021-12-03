@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: Display Green Fins member info from Portal API
+Plugin Name: Display Green Fins members from Assessor Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
 Version: 2.0
 Author: James Greenhalgh
-Author URI: https://www.linkedin.com/in/jgrnh/
+Author URI: https://www.linkedin.com/in/jamesgreenblue/
 License: GPLv2 or later
 Text Domain: rwf-gf-members-api
 */
@@ -19,23 +19,13 @@ defined('ABSPATH') or die('No script kiddies please');
  */
 function list_top10members_func()
 {
-
-   // Fetch top-10-members category
-   // Requires the category to be set and a sort value ('wpsl_top_10_member_sort') set in the Top 10 tab on the store page
    $args = array(
       'numberposts'  => 10,
       'post_type'    => 'wpsl_stores',
-      'post_status'  => array('publish', 'pending', 'draft'),
-      'meta_key'     => 'wpsl_top_10_member_sort',
+      'post_status'  => array('publish'),
+      'meta_key'     => 'wpsl_api_latest_score',
       'orderby'      => 'meta_value_num',
       'order'        => 'ASC',
-      'tax_query'    => array(
-         array(
-            'taxonomy' => 'wpsl_store_category',
-            'field'    => 'slug',
-            'terms'    => 'top-10-member'
-         ),
-      ),
    );
    $top_10_members = new WP_Query($args);
 
@@ -44,8 +34,10 @@ function list_top10members_func()
 
    // Loop over the returned members
    $i = 0;
+   $n = 0;
    foreach ($top_10_members->posts as $key => $top_10_member) {
       $i++;
+      $n++;
 
       // Add a list item for each member to the string
       $return .= <<<LISTING
@@ -58,7 +50,7 @@ function list_top10members_func()
 
                <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
                   <h2>
-                     <span class="count">$top_10_member->wpsl_top_10_member_sort</span><a target="_blank" href="$top_10_member->wpsl_url">$top_10_member->post_title</a>
+                     <span class="count">$n</span><a target="_blank" href="$top_10_member->wpsl_url">$top_10_member->post_title</a>
                   </h2>
                   <p class="industry">$top_10_member->wpsl_industry</p>
                   <p class="description">$top_10_member->wpsl_city</p>
@@ -105,8 +97,9 @@ function list_top5bycountry_func($atts = [])
       $atts
    );
 
-   /*
- * @todo: re-write this function pulling the latest score, will require making another API call. Also abstract the top10 grid container into its own function and reuse here.
+/*
+ * @todo: Re-write this function using the score info which is now available (use top10 WP_Query with memberlocation filters as a model). 
+ * @todo: Abstract the top10 grid container into its own function and reuse here.
 */
 
    return null;
@@ -397,7 +390,7 @@ function rwf_gf_populate_members_as_posts_func()
 {
    // For logging output (including timing how long it takes to execute)
    $start_microtime = microtime(true);
-   $trace_id = "id:" . substr(hash('adler32', $start_microtime), -4);
+   $trace_id = uniqid('id:');
    $member_record_created_count = 0;
    $member_record_updated_count = 0;
    $member_logo_updated_count = 0;
@@ -533,6 +526,8 @@ function rwf_gf_populate_members_as_posts_func()
             'api_logo_filename'     => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
             'api_industry'          => $member['industry'],
             'api_membership_status' => $member['status'],
+            'api_membership_level'  => $member['membership_level'],
+            'api_latest_score'      => $member['latest_score'],
             'address'               => $member['address1'],
             'address2'              => $member['address2'],
             'city'                  => $member['location_name'],
