@@ -1,35 +1,8 @@
-# ignore everything in the root except the "wp-content" directory.
-/*
-!wp-content/
-
-# ignore everything in the "wp-content" directory, except:
-# "mu-plugins", "plugins", "themes" directory
-wp-content/*
-!wp-content/plugins/
-!wp-content/themes/
-!wp-content/gf-member-logos
-
-# ignore these plugins
-wp-content/plugins/*
-!wp-content/plugins/rwf-gf-members-api
-
-# ignore specific themes
-wp-content/themes/twenty*/
-
-# ignore node dependency directories
-node_modules/
-
 # ignore log files and databases
 *.log
 *.sql
 *.sqlite
 
-# additions
-!.gitignore
-!.readme.md
-
 ## IDE configuration files
 .vscode
-
-
 .DS_Store
