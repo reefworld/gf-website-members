@@ -304,7 +304,7 @@ function list_membersbylocation_func($atts = [])
       // Figure out what we are outputting
 
       if (!$members->have_posts()) {
-         return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-members-api');
+         return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-website-members');
       } else {
          // We're going to return a grid container.
 
@@ -550,7 +550,7 @@ function rwf_gf_populate_members_as_posts_func()
 
    if (WP_CONTENT_URL == "https://greenfins.net/wp-content") {
       // We are on production so send heartbeat for status.reef-world.org
-      wp_remote_head("https://betteruptime.com/api/v1/heartbeat/t8gUL7PojCFSRaAYKgbDtqKV");
+      wp_remote_head( get_option('rwf_heartbeat_key') );
    }
 
    rwf_write_log("[" . $trace_id . "] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
@@ -573,7 +573,7 @@ function rwf_gf_populate_members_as_posts_func()
  */
 function rwf_write_log($log_entry)
 {
-   $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-members-api.log.' . date('Y-m-d') . '.txt';
+   $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-website-members.log.' . date('Y-m-d') . '.txt';
    $log_file = fopen($log_file_path, "a");
    fwrite($log_file, date('Y-m-d H:i:s') . ' : ' . $log_entry . PHP_EOL);
    fclose($log_file);
@@ -614,9 +614,9 @@ function rwf_gf_members_api_plugin_options()
    if (isset($_GET['status']) && $_GET['status'] == 'success') {
 ?>
       <div id="message" class="updated notice is-dismissible">
-         <p><?php _e("Settings updated!", "rwf-gf-members-api"); ?></p>
+         <p><?php _e("Settings updated!", "rwf-gf-website-members"); ?></p>
          <button type="button" class="notice-dismiss">
-            <span class="screen-reader-text"><?php _e("Dismiss this notice.", "rwf-gf-members-api"); ?></span>
+            <span class="screen-reader-text"><?php _e("Dismiss this notice.", "rwf-gf-website-members"); ?></span>
          </button>
       </div>
    <?php
@@ -627,7 +627,7 @@ function rwf_gf_members_api_plugin_options()
 
       <input type="hidden" name="action" value="update_rwf_gf_members_api_plugin_settings" />
 
-      <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-members-api"); ?></h1>
+      <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-website-members"); ?></h1>
 
       <p>
          This plugin displays Green Fins member information within maps, on pages and posts (using shortcodes).
@@ -650,12 +650,12 @@ function rwf_gf_members_api_plugin_options()
 
       <br>
 
-      <h2><?php _e("Plugin Settings", "rwf-gf-members-api"); ?></h2>
+      <h2><?php _e("Plugin Settings", "rwf-gf-website-members"); ?></h2>
 
       <table class="form-table" role="presentation">
          <tr>
             <th scope="row"><label>
-                  <?php _e("API Endpoint:", "rwf-gf-members-api"); ?></label>
+                  <?php _e("API Endpoint:", "rwf-gf-website-members"); ?></label>
             </th>
             <td>
                <input class="" type="text" name="rwf_api_endpoint" value="<?php echo get_option('rwf_api_endpoint'); ?>" />
@@ -663,17 +663,25 @@ function rwf_gf_members_api_plugin_options()
          </tr>
          <tr>
             <th scope="row"><label>
-                  <label><?php _e("API Key:", "rwf-gf-members-api"); ?></label>
+                  <label><?php _e("API Key:", "rwf-gf-website-members"); ?></label>
             </th>
             <td>
                <input class="" type="text" name="rwf_api_key" value="<?php echo get_option('rwf_api_key'); ?>" />
+            </td>
+         </tr>
+         <tr>
+            <th scope="row"><label>
+                  <label><?php _e("Heartbeat Key:", "rwf-gf-website-members"); ?></label>
+            </th>
+            <td>
+               <input class="" type="text" name="rwf_heartbeat_key" value="<?php echo get_option('rwf_heartbeat_key'); ?>" />
             </td>
          </tr>
       </table>
 
       <br>
 
-      <input class="button button-primary" type="submit" value="<?php _e("Update Plugin Settings", "rwf-gf-members-api"); ?>" />
+      <input class="button button-primary" type="submit" value="<?php _e("Update Plugin Settings", "rwf-gf-website-members"); ?>" />
 
    </form>
 
@@ -695,7 +703,7 @@ function rwf_gf_members_api_plugin_options()
          <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong>. To see logs for previous days please look in the plugin's /logs/ folder. </p>
          <div style="margin-top: 20px; padding: 10px 20px; height: 500px; width: 90%; overflow-y: scroll; background: #fff;">
             <pre><?php
-                  $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-members-api.log.' . date('Y-m-d') . '.txt';
+                  $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-website-members.log.' . date('Y-m-d') . '.txt';
                   echo file_get_contents($log_file_path);
                   ?></pre>
          </div>
@@ -709,12 +717,14 @@ function rwf_gf_members_api_plugin_options()
       // Get the options that were sent
       $key = (!empty($_POST["rwf_api_key"])) ? $_POST["rwf_api_key"] : NULL;
       $endpoint = (!empty($_POST["rwf_api_endpoint"])) ? $_POST["rwf_api_endpoint"] : NULL;
+      $heartbeat = (!empty($_POST["rwf_heartbeat_key"])) ? $_POST["rwf_heartbeat_key"] : NULL;
 
       // API Validation to go here
 
       // Update the values
       update_option("rwf_api_key", $key, TRUE);
       update_option("rwf_api_endpoint", $endpoint, TRUE);
+      update_option("rwf_heartbeat_key", $heartbeat, TRUE);
 
       // Redirect back to settings page
       $redirect_url = get_bloginfo("url") . "/wp-admin/options-general.php?page=rwf_gf_members_api_plugin&status=success";
