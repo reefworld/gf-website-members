@@ -573,7 +573,7 @@ function rwf_gf_populate_members_as_posts_func()
  */
 function rwf_write_log($log_entry)
 {
-   $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-website-members.log.' . date('Y-m-d') . '.txt';
+   $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-website-members.log.' . date('Y-m-d') . '.log';
    $log_file = fopen($log_file_path, "a");
    fwrite($log_file, date('Y-m-d H:i:s') . ' : ' . $log_entry . PHP_EOL);
    fclose($log_file);
@@ -703,7 +703,7 @@ function rwf_gf_members_api_plugin_options()
          <p>Log output for <strong><?php echo date('Y-m-d'); ?></strong>. To see logs for previous days please look in the plugin's /logs/ folder. </p>
          <div style="margin-top: 20px; padding: 10px 20px; height: 500px; width: 90%; overflow-y: scroll; background: #fff;">
             <pre><?php
-                  $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-website-members.log.' . date('Y-m-d') . '.txt';
+                  $log_file_path =  plugin_dir_path(__FILE__) . 'logs/rwf-gf-website-members.log.' . date('Y-m-d') . '.log';
                   echo file_get_contents($log_file_path);
                   ?></pre>
          </div>
