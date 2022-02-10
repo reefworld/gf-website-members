@@ -3,11 +3,11 @@
 Plugin Name: Display Green Fins members from Assessor Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 2.1
+Version: 2.2
 Author: James Greenhalgh
-Author URI: https://www.linkedin.com/in/jamesgreenblue/
-License: GPLv2 or later
-Text Domain: rwf-gf-members-api
+Author URI: https://jamesgreenblue.com
+License: GPLv3
+Text Domain: rwf-gf-website-members
 */
 
 defined('ABSPATH') or die('No script kiddies please');
