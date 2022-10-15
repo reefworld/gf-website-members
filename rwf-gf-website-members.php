@@ -3,7 +3,7 @@
 Plugin Name: Display Green Fins members from Assessor Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 3.3
+Version: 3.4
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -833,7 +833,7 @@ function rwf_gf_digital_members_as_posts_func()
       return $api_response;
    }
 
-   $url = '/v1/operations?type=DIGITAL';
+   $url = '/operations?type=DIGITAL';
    $members = rwf_hub_fetch('members list', $url, $trace_id);
 
    // We've built the members list, time to make some posts
@@ -891,18 +891,29 @@ function rwf_gf_digital_members_as_posts_func()
 
       if ($post_id) {
          // Add or update the post meta with the member's info and fetch a local copy of the logo
+         
          switch ($member['membership_level']) {
             case "Certified Bronze Member":
                $member['membership_level'] = "3";
+               $term_id = array( 417 ); //overwrite with certified-bronze-member
                 break;
             case "Certified Silver Member":
                $member['membership_level'] = "2";
+               $term_id = array( 416 ); //overwrite with certified-silver-member
                 break;
             case "Certified Gold Member":
                $member['membership_level'] = "1";
+               $term_id = array( 415 ); //overwrite with certified-gold-member
                 break;
             default:
                $member['membership_level'] = "none";
+               $term_id = array(); //unset inactive certified memebrs
+         }
+
+         if ($member['membership_type'] == "DIGITAL" && $member['membership_status'] == 'ACTIVE') {
+            $term_id = array( 414 ); //digital-member
+         } else {
+            $term_id = array(); //unset inactive digital memebrs
          }
 
          // Set file destination.
@@ -950,6 +961,9 @@ function rwf_gf_digital_members_as_posts_func()
                update_post_meta($post_id, 'wpsl_' . $meta, $value);
             }
          }
+
+         //set the wpsl_store_category for map display and filtering
+         wp_set_post_terms($post_id, $term_id, 'wpsl_store_category');
       }
    }
 
@@ -1107,18 +1121,23 @@ function rwf_gf_certified_members_as_posts_func()
 
       if ($post_id) {
          // Add or update the post meta with the member's info and fetch a local copy of the logo
+
          switch ($member['membership_level']) {
             case "Certified Bronze Member":
                $member['membership_level'] = "3";
+               $term_id = array( 417 ); //certified-bronze-member
                 break;
             case "Certified Silver Member":
                $member['membership_level'] = "2";
+               $term_id = array( 416 ); //certified-silver-member
                 break;
             case "Certified Gold Member":
                $member['membership_level'] = "1";
+               $term_id = array( 415 ); //certified-gold-member
                 break;
             default:
                $member['membership_level'] = "none";
+               $term_id = array();
          }
 
          // Set file destination.
@@ -1165,6 +1184,9 @@ function rwf_gf_certified_members_as_posts_func()
                update_post_meta($post_id, 'wpsl_' . $meta, $value);
             }
          }
+
+         //set the wpsl_store_category for map display and filtering
+         wp_set_post_terms($post_id, $term_id, 'wpsl_store_category');
       }
    }
 
