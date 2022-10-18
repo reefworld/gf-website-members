@@ -3,7 +3,7 @@
 Plugin Name: Display Green Fins members from Assessor Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 3.4
+Version: 3.5
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -339,7 +339,7 @@ function list_digitalmembers_func($atts = [])
 
 
 /**
- * List Members by Country
+ * List Members by Country or industry
  *
  * Outputs a list of certified and digital Green Fins members – intended to be used for active countries
  */
@@ -348,12 +348,24 @@ function list_membersbycountry_func($atts = [])
    // Override default attributes with user attributes
    $get_atts = shortcode_atts(
       array(
-         'country' => 'Please specify a valid country & location to display the members list'
+         'country' => false,
+         'industry' => false
       ),
       $atts
    );
 
-   // Fetch members by country and location 
+   // are we fetching for a country or an industry?
+   if ($get_atts['country']) {
+      $args_key = 'wpsl_country';
+      $args_value = $get_atts['country'];
+   } else if ($get_atts['industry']) {
+      $args_key = 'wpsl_api_industry';
+      $args_value = $get_atts['industry'];
+   } else {
+      return __("<center>Please specify a country or an industry.</center><br><br>", 'rwf-gf-website-members');
+   }
+
+   // Fetch members by country or industry
    $args = array(
       'posts_per_page'  => -1,
       'post_type'    => 'wpsl_stores',
@@ -362,8 +374,8 @@ function list_membersbycountry_func($atts = [])
       'meta_query'   => array(
          'relation' => 'AND',
          array(
-            'key'     => 'wpsl_country',
-            'value'   => $get_atts['country'],
+            'key'     => $args_key,
+            'value'   => $args_value,
          ),
          'membership_level' => array(
             'key'     => 'wpsl_api_membership_level',
