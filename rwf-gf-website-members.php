@@ -3,7 +3,7 @@
 Plugin Name: Display Green Fins members from Assessor Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 3.5
+Version: 3.6
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -507,8 +507,10 @@ function gf_member_listing($member)
    if ($member->wpsl_api_membership_status == "active"){
       if($member->wpsl_api_membership_type == "digital"){
          $type_level_status = "digital";
+         $gf_stamp = '<a target=_blank" href="/about-green-fins/#digital-membership" alt="Green Fins membership stamp" title="Digital Members self-manage their sustainability journey."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_digital.png"></a>';
       } else {
          $type_level_status = $member->wpsl_api_membership_type . ' ' . $member->wpsl_api_membership_level;
+         $gf_stamp = '<a target=_blank" href="/about-green-fins/#certified-membership" alt="Green Fins membership stamp" title="Certified Members receive in-person assessments and training."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_' . $member->wpsl_api_membership_level . '.png"></a>';
       }
 
    } else {
@@ -521,7 +523,8 @@ function gf_member_listing($member)
             <section class="gf-centre-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
                <div class="grid-container grid-parent">
                   <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                        <img src="$member->wpsl_api_logo_filename">
+                        <img class="logo" src="$member->wpsl_api_logo_filename">
+                        $gf_stamp
                   </div>
 
                   <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
@@ -529,13 +532,12 @@ function gf_member_listing($member)
                         $clean_title
                      </h2>
 
-                     <p class="tag typelevelstatus">$type_level_status</p>
+                     <p class="tag typelevelstatus">$type_level_status member</p>
                      <p class="tag industry $member->wpsl_api_industry">$member->wpsl_api_industry</p>
 
-                        <p><strong>Address:</strong></p>
-                           <p class="contact-item">$member->wpsl_address</p>
-                           <p class="contact-item">$member->wpsl_city</p>
-                           <p class="contact-item">$member->wpsl_country</p>
+
+                        <p class="">$member->wpsl_city</p>
+                        <p class="">$member->wpsl_country</p>
                         <p class="contact">Contact info:</p>
                            <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
                            <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
