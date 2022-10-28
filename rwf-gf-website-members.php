@@ -3,7 +3,7 @@
 Plugin Name: Display Green Fins members from Assessor Portal API
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 3.6
+Version: 3.7
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -94,13 +94,13 @@ function single_verify_membership_func()
       $return .= <<<LISTING
             <p><strong>Green Fins Member found:</strong></p>
             <div class="grid-100 tablet-grid-100 mobile-grid-100">
-               <section class="gf-centre-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
+               <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
                   <div class="grid-container grid-parent">
-                     <div class="gf-centre-listing-image grid-20 tablet-grid-20 mobile-grid-100">
+                     <div class="gf-operation-listing-image grid-20 tablet-grid-20 mobile-grid-100">
                            <img src="$member->wpsl_api_logo_filename">
                      </div>
    
-                     <div class="gf-centre-listing-meta grid-80 tablet-grid-80 mobile-grid-100">
+                     <div class="gf-operation-listing-meta grid-80 tablet-grid-80 mobile-grid-100">
                         <h2>
                            $clean_title
                         </h2>
@@ -301,10 +301,10 @@ function list_digitalmembers_func($atts = [])
 
       foreach ($locations as $location) {
 
-         $return .= "<h2 class=\"gb-headline gb-headline-text\">" . $location[0]->wpsl_country . "</h2>";
+         $return .= '<h2 class="gb-headline gb-headline-text">' . $location[0]->wpsl_country . '</h2>';
 
          // We're going to return a grid container
-         $return .= "<div class=\"grid-container\">";
+         $return .= '<div class="grid-container">';
 
          $i = 0;
          // Loop over the returned members
@@ -442,10 +442,10 @@ function list_membersbycountry_func($atts = [])
 
       foreach ($locations as $location) {
 
-         $return .= "<h2 class=\"gb-headline gb-headline-text\">" . $location[0]->wpsl_city . "</h2>";
+         $return .= '<h2 class="gb-headline gb-headline-text">' . $location[0]->wpsl_city . '</h2>';
 
          // We're going to return a grid container
-         $return .= "<div class=\"grid-container\">";
+         $return .= '<div class="grid-container">';
 
          $i = 0;
          // Loop over the returned members
@@ -517,33 +517,31 @@ function gf_member_listing($member)
       $type_level_status = "inactive";
    }
 
+   if($member->wpsl_api_industry) {
+      $gf_industry = '<p class="tag industry ' . $member->wpsl_api_industry . '">'. $member->wpsl_api_industry . '</p>';
+   }
+
    // Add a list item for each member to the string
    $return .= <<<LISTING
          <div class="grid-33 tablet-grid-33 mobile-grid-100">
-            <section class="gf-centre-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
-               <div class="grid-container grid-parent">
-                  <div class="gf-centre-listing-image grid-35 tablet-grid-35 mobile-grid-100">
-                        <img class="logo" src="$member->wpsl_api_logo_filename">
-                        $gf_stamp
-                  </div>
-
-                  <div class="gf-centre-listing-meta grid-65 tablet-grid-65 mobile-grid-100">
-                     <h2>
-                        $clean_title
-                     </h2>
-
-                     <p class="tag typelevelstatus">$type_level_status member</p>
-                     <p class="tag industry $member->wpsl_api_industry">$member->wpsl_api_industry</p>
-
-
-                        <p class="">$member->wpsl_city</p>
-                        <p class="">$member->wpsl_country</p>
-                        <p class="contact">Contact info:</p>
-                           <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
-                           <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
-                           <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
-                  </div>
+            <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
+               <div class="logo-container">
+                  <img class="logo" src="$member->wpsl_api_logo_filename">
+                  $gf_stamp
                </div>
+
+               <h2>
+                  $clean_title
+               </h2>
+
+               <p class="tag typelevelstatus">$type_level_status member</p>
+               $gf_industry
+
+               <p>$member->wpsl_city, $member->wpsl_country</p>
+               <p class="contact">Contact info:</p>
+                  <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
+                  <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
+                  <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
             </section>
          </div>
       LISTING;
