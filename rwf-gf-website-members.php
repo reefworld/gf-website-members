@@ -49,7 +49,18 @@ function single_verify_membership_func()
    // Figure out what we are outputting
 
    if (!$members_query->have_posts()) {
-      return __('<center><p style="color:red"><strong>No data for this Green Fins Member. <br><br>(This feature currently only works for Green Fins Digital Members. The ability to verify Green Fins Certified Members is coming in Q4 2022. Please check back soon!)</strong></p></center>', 'rwf-gf-website-members');
+
+      $error = <<<ERROR
+         <h3>Error: No data for this Green Fins Member</h3>
+         <div class="grid-100 tablet-grid-100 mobile-grid-100">
+            <section class="gf-operation-listing gf-member-digital">
+               <p>This feature currently only works for Green Fins Digital Members – <strong>verifying Green Fins Certified Members is coming in Q4 2022. Please check back soon!</strong></p>
+            </section>
+         </div>
+      ERROR;
+
+      return $error;
+
    } else {
 
       $member = $members_query->posts[0];
@@ -76,8 +87,10 @@ function single_verify_membership_func()
          case "active":
             if($member->wpsl_api_membership_type == "digital"){
                $type_level_status = "digital";
+               $gf_stamp = '<a target=_blank" href="/about-green-fins/#digital-membership" alt="Green Fins membership stamp" title="Digital Members self-manage their sustainability journey."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_digital.png"></a>';
             } else {
                $type_level_status = $member->wpsl_api_membership_type . ' ' . $member->wpsl_api_membership_level;
+               $gf_stamp = '<a target=_blank" href="/about-green-fins/#certified-membership" alt="Green Fins membership stamp" title="Certified Members receive in-person assessments and training."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_' . $member->wpsl_api_membership_level . '.png"></a>';
             }
              break;
          case "restricted":
@@ -89,38 +102,49 @@ function single_verify_membership_func()
          default:
             $type_level_status = "inactive";
       }
+
+      if($member->wpsl_api_industry) {
+         $gf_industry = '<p class="tag industry ' . $member->wpsl_api_industry . '">'. $member->wpsl_api_industry . '</p>';
+      }
    
       // Add a list item for each member to the string
       $return .= <<<LISTING
-            <p><strong>Green Fins Member found:</strong></p>
-            <div class="grid-100 tablet-grid-100 mobile-grid-100">
-               <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
-                  <div class="grid-container grid-parent">
-                     <div class="gf-operation-listing-image grid-20 tablet-grid-20 mobile-grid-100">
-                           <img src="$member->wpsl_api_logo_filename">
-                     </div>
-   
-                     <div class="gf-operation-listing-meta grid-80 tablet-grid-80 mobile-grid-100">
-                        <h2>
-                           $clean_title
-                        </h2>
-   
-                        <p class="tag typelevelstatus">$type_level_status</p>
-                        <p class="tag industry $member->wpsl_api_industry">$member->wpsl_api_industry</p>
-   
-                           <p><strong>Address:</strong></p>
-                              <p class="contact-item">$member->wpsl_address</p>
-                              <p class="contact-item">$member->wpsl_city</p>
-                              <p class="contact-item">$member->wpsl_country</p>
-                           <p class="contact">Contact info:</p>
-                              <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
-                              <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
-                              <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
-                     </div>
-                  </div>
-               </section>
-            </div>
-         LISTING;
+         <h3>Green Fins Member found:</h3>
+         <div class="grid-100 tablet-grid-100 mobile-grid-100">
+            <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
+               <div class="logo-container">
+                  <img class="logo" src="$member->wpsl_api_logo_filename">
+                  $gf_stamp
+               </div>
+
+               <h2>
+                  $clean_title
+               </h2>
+
+               <p class="tag typelevelstatus">$type_level_status member</p>
+               $gf_industry
+
+               <p>$member->wpsl_city, $member->wpsl_country</p>
+               <p class="contact">Contact info:</p>
+                  <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
+                  <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
+                  <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
+
+               <h2>
+                  Action plan (coming Q1 2023!)
+               </h2>
+
+               <p>This operation has agreed to work on solutions to the following action plan points during their current year of Green Fins membership:</p>
+
+               <ul class="gf-verify-feedback">
+                  <li>Point 1</li>
+                  <li>Point 2</li>
+                  <li>Point 3</li>
+                  <li>Point 4</li>
+               </ul>
+            </section>
+         </div>
+      LISTING;
    
       return $return;
 
@@ -165,7 +189,7 @@ function list_top10members_func()
    $top_10_members = new WP_Query($args);
 
    // We're going to return a grid container.
-   $return = "<div class=\"grid-container\">";
+   $return = '<div class="grid-container">';
 
    // Loop over the returned members
    $i = 0;
