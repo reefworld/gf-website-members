@@ -53,8 +53,8 @@ function single_verify_membership_func()
       $error = <<<ERROR
          <h3>Error: No data for this Green Fins Member</h3>
          <div class="grid-100 tablet-grid-100 mobile-grid-100">
-            <section class="gf-operation-listing gf-member-digital">
-               <p>This feature currently only works for Green Fins Digital Members – <strong>verifying Green Fins Certified Members is coming in Q4 2022. Please check back soon!</strong></p>
+            <section class="gf-operation-listing gf-member-restricted">
+               <p><strong>This feature currently only works for Green Fins Digital Members</strong> – verifying Green Fins Certified Members is planned for end of Q4 2022 but may slip to Q1 2023 (depending on the rollout of Green Fins Hub in each active country). <br><br>An announcement will be made on social media when the feature is ready. Please check back soon!</p>
             </section>
          </div>
       ERROR;
@@ -82,6 +82,9 @@ function single_verify_membership_func()
          $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $url ) ,"/");
       }
       
+      $gf_stamp ='';
+      $gf_industry = '';
+
       // fixing the tags that are output on the member listings
       switch ($member->wpsl_api_membership_status) {
          case "active":
@@ -511,6 +514,8 @@ function list_membersbycountry_func($atts = [])
 function gf_member_listing($member)
 {
    $return = "";
+   $gf_stamp ='';
+   $gf_industry = '';
 
    $url = $member->wpsl_url;
    if (!preg_match("~^(?:f|ht)tps?://~i", $url)) {
