@@ -1014,7 +1014,7 @@ function rwf_gf_digital_members_as_posts_func()
       'post_status' => 'any',
       'posts_per_page' => -1,
       'date_query' => array(
-         'before' => date('Y-m-d', strtotime('-1 day')) 
+         'before' => date('Y-m-d', strtotime('-1 hour')) // if only a date was passed in it would be converted to 00:00:00 on that date – adding a time ensures the date is inclusive
      )
    );
    $archived_members_exist = get_posts($args);
