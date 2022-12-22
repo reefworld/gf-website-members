@@ -328,7 +328,7 @@ function list_digitalmembers_func($atts = [])
 
       foreach ($locations as $location) {
 
-         $return .= '<h2 class="gb-headline gb-headline-text">' . $location[0]->wpsl_country . '</h2>';
+         $return .= '<h2 class="gb-headline gb-headline-text" id="' . sanitize_title($location[0]->wpsl_country) . '">' . $location[0]->wpsl_country . '</h2>';
 
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
@@ -370,7 +370,7 @@ function list_digitalmembers_func($atts = [])
  *
  * Outputs a list of certified and digital Green Fins members – intended to be used for active countries
  */
-function list_membersbycountry_func($atts = [])
+function list_membersby_func($atts = [])
 {
    // Override default attributes with user attributes
    $get_atts = shortcode_atts(
@@ -469,7 +469,7 @@ function list_membersbycountry_func($atts = [])
 
       foreach ($locations as $location) {
 
-         $return .= '<h2 class="gb-headline gb-headline-text">' . $location[0]->wpsl_city . '</h2>';
+         $return .= '<h2 class="gb-headline gb-headline-text" id="' . sanitize_title($location[0]->wpsl_city) . '">' . $location[0]->wpsl_city . '</h2>';
 
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
@@ -1281,7 +1281,7 @@ function rwf_gf_members_api_plugin_menu_func()
       "options-general.php",                    // Which menu parent
       "Green Fins Members API Plugin Settings",    // Page title
       "Green Fins Members API",                    // Menu title
-      "manage_options",                            // Minimum capability (manage_options is an easy way to target administrators)
+      "gf_trigger_api",                            // Minimum capability (manage_options is an easy way to target administrators)
       "rwf_gf_members_api_plugin",                 // Menu slug
       "rwf_gf_members_api_plugin_options"          // Callback that prints the markup
    );
@@ -1290,7 +1290,7 @@ function rwf_gf_members_api_plugin_menu_func()
 // Print the markup for the page
 function rwf_gf_members_api_plugin_options()
 {
-   if (!current_user_can("manage_options")) {
+   if (!current_user_can("gf_trigger_api")) {
       wp_die(__("You do not have sufficient permissions to access this page."));
    }
 
@@ -1326,8 +1326,14 @@ function rwf_gf_members_api_plugin_options()
       <ul>
          <li><code>[list_top10members]</code> displays the Top 10 members</li>
          <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li>
+         <li><code>[list_membersby country=""]</code> displays the active and inactive members for the specified country grouped by location.</li>
+         <li><code>[list_membersby industry="liveaboard"]</code> displays the active and inactive members for the specified industry grouped by location.</li>
+         <li><code>[list_digitalmembers]</code> displays the active and inactive digital members grouped by location.</li>
+         
+<!--
          <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location.</li>
          <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code> displays the average score meter section for the specified country and location.</li>
+-->
       </ul>
       </p>
 
@@ -1489,7 +1495,7 @@ function rwf_gf_members_api_plugin_options()
       add_shortcode("list_top10members", "list_top10members_func");
       add_shortcode("list_top5bycountry", "list_top5bycountry_func");
       add_shortcode("list_membersbylocation", "list_membersbylocation_func"); //depreciated
-      add_shortcode("list_membersbycountry", "list_membersbycountry_func");
+      add_shortcode("list_membersby", "list_membersby_func");
       add_shortcode("list_digitalmembers", "list_digitalmembers_func");
       add_shortcode("single_verify_membership", "single_verify_membership_func");
    }
