@@ -63,92 +63,11 @@ function single_verify_membership_func()
 
    } else {
 
-      $member = $members_query->posts[0];
+      $return = "<h3>Green Fins Member found:</h3>";
+      $return .= '<div class="grid-container">';
+      $return .= gf_member_listing($members_query->posts[0], 100);
+      $return .= "</div>";
 
-      $return = "";
-
-      $url = $member->wpsl_url;
-      if (!preg_match("~^(?:f|ht)tps?://~i", $url)) {
-            $url = "https://" . $url;
-      }
-   
-      // Not all listings have links
-      if ($url === 'http://') { 
-         $clean_title = $member->post_title;
-         $clean_url = '';
-      }
-      else {
-         $clean_title = '<a target="_blank" href="' . $url . '">' . $member->post_title .'</a>';
-         $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $url ) ,"/");
-      }
-      
-      $gf_stamp ='';
-      $gf_industry = '';
-
-      // fixing the tags that are output on the member listings
-      switch ($member->wpsl_api_membership_status) {
-         case "active":
-            if($member->wpsl_api_membership_type == "digital"){
-               $type_level_status = "digital";
-               $gf_stamp = '<a target=_blank" href="/about-green-fins/#digital-membership" alt="Green Fins membership stamp" title="Digital Members self-manage their sustainability journey."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_digital.png"></a>';
-            } else {
-               $type_level_status = $member->wpsl_api_membership_type . ' ' . $member->wpsl_api_membership_level;
-               $gf_stamp = '<a target=_blank" href="/about-green-fins/#certified-membership" alt="Green Fins membership stamp" title="Certified Members receive in-person assessments and training."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_' . $member->wpsl_api_membership_level . '.png"></a>';
-            }
-             break;
-         case "restricted":
-            $type_level_status = "restricted";
-             break;
-         case "closed":
-            $type_level_status = "closed";
-             break;
-         default:
-            $type_level_status = "inactive";
-      }
-
-      if($member->wpsl_api_industry) {
-         $gf_industry = '<p class="tag industry ' . $member->wpsl_api_industry . '">'. $member->wpsl_api_industry . '</p>';
-      }
-   
-      // Add a list item for each member to the string
-      $return .= <<<LISTING
-         <h3>Green Fins Member found:</h3>
-         <div class="grid-100 tablet-grid-100 mobile-grid-100">
-            <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
-               <div class="logo-container">
-                  <img class="logo" src="$member->wpsl_api_logo_filename">
-                  $gf_stamp
-               </div>
-
-               <h2>
-                  $clean_title
-               </h2>
-
-               <p class="tag typelevelstatus">$type_level_status member</p>
-               $gf_industry
-
-               <p>$member->wpsl_city, $member->wpsl_country</p>
-               <p class="contact">Contact info:</p>
-                  <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
-                  <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
-                  <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
-
-               <h2>
-                  Action plan (coming Q1 2023!)
-               </h2>
-
-               <p>This operation has agreed to work on solutions to the following action plan points during their current year of Green Fins membership:</p>
-
-               <ul class="gf-verify-feedback">
-                  <li>Point 1</li>
-                  <li>Point 2</li>
-                  <li>Point 3</li>
-                  <li>Point 4</li>
-               </ul>
-            </section>
-         </div>
-      LISTING;
-   
       return $return;
 
    }
@@ -511,7 +430,7 @@ function list_membersby_func($atts = [])
  *
  * Outputs a member listing
  */
-function gf_member_listing($member)
+function gf_member_listing($member, $percent = 33)
 {
    $return = "";
    $gf_stamp ='';
@@ -533,17 +452,24 @@ function gf_member_listing($member)
    }
    
    // fixing the tags that are output on the member listings
-   if ($member->wpsl_api_membership_status == "active"){
-      if($member->wpsl_api_membership_type == "digital"){
-         $type_level_status = "digital";
-         $gf_stamp = '<a target=_blank" href="/about-green-fins/#digital-membership" alt="Green Fins membership stamp" title="Digital Members self-manage their sustainability journey."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_digital.png"></a>';
-      } else {
-         $type_level_status = $member->wpsl_api_membership_type . ' ' . $member->wpsl_api_membership_level;
-         $gf_stamp = '<a target=_blank" href="/about-green-fins/#certified-membership" alt="Green Fins membership stamp" title="Certified Members receive in-person assessments and training."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_' . $member->wpsl_api_membership_level . '.png"></a>';
-      }
-
-   } else {
-      $type_level_status = "inactive";
+   switch ($member->wpsl_api_membership_status) {
+      case "active":
+         if($member->wpsl_api_membership_type == "digital"){
+            $type_level_status = "digital";
+            $gf_stamp = '<a target=_blank" href="/about-green-fins/#digital-membership" alt="Green Fins membership stamp" title="Digital Members self-manage their sustainability journey."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_digital.png"></a>';
+         } else {
+            $type_level_status = $member->wpsl_api_membership_type . ' ' . $member->wpsl_api_membership_level;
+            $gf_stamp = '<a target=_blank" href="/about-green-fins/#certified-membership" alt="Green Fins membership stamp" title="Certified Members receive in-person assessments and training."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_' . $member->wpsl_api_membership_level . '.png"></a>';
+         }
+            break;
+      case "restricted":
+         $type_level_status = "restricted";
+            break;
+      case "closed":
+         $type_level_status = "closed";
+            break;
+      default:
+         $type_level_status = "inactive";
    }
 
    if($member->wpsl_api_industry) {
@@ -552,7 +478,7 @@ function gf_member_listing($member)
 
    // Add a list item for each member to the string
    $return .= <<<LISTING
-         <div class="grid-33 tablet-grid-33 mobile-grid-100">
+         <div class="grid-$percent tablet-grid-$percent mobile-grid-100">
             <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
                <div class="logo-container">
                   <img class="logo" src="$member->wpsl_api_logo_filename">
@@ -577,247 +503,6 @@ function gf_member_listing($member)
 
    return $return;
 }
-
-
-
-
-
-
-
-
-/**
- * (depreciated) List Members by Location
- *
- * Outputs a list of members or the average score for a given location from the Portal API
- */
-function list_membersbylocation_func($atts = [])
-{
-   // Override default attributes with user attributes
-   $get_atts = shortcode_atts(
-      array(
-         'country' => 'Please specify a valid country & location to display the members list',
-         'location' => 'Please specify a valid country & location to display the members list',
-         'display_average_score' => false
-      ),
-      $atts
-   );
-
-   if ($get_atts['display_average_score']) {
-      // We are going to return an average score section
-      $average_lookup = get_transient('rwf_get_averagescore_' . $get_atts['country'] . "_" . $get_atts['location']);
-
-      if (isset($average_lookup)) {
-         $average_score = round($average_lookup);
-         $average_score_percent = 100 - ($average_score / 330 * 100); //We want a zero score to fill the progress bar
-
-         if ($average_score < 28) {
-            $average_score_style = 'lower';
-         } elseif ($average_score < 205) {
-            $average_score_style = 'middle';
-         } else {
-            $average_score_style = 'upper';
-         }
-
-         $atts_location = $get_atts['location']; // Needed inside the HEREDOC
-      }
-
-      $return = <<<SCORE
-         <div class="gb-container gb-container-f07c0c81">
-            <div class="gb-inside-container"></div>
-         </div>
-
-         <div class="gb-container gb-container-a57dea89 gf-section-average-score">
-            <div class="gb-inside-container">
-               <h1 class="gb-headline gb-headline-a284ca0f">Average Score: $average_score</h1>
-
-               <p>This is the average environmental performance score of members in <strong>$atts_location</strong></p>
-
-               <div class="gf-score-meter">
-                     <span class="gf-score-$average_score_style" style="width: $average_score_percent%"></span>
-               </div>
-
-               <div class="gb-container gb-container-d429c552">
-                     <div class="gb-inside-container">
-                        <div class="gb-grid-wrapper gb-grid-wrapper-e77d8655">
-                           <div class="gb-grid-column gb-grid-column-fe72985d">
-                                 <div class="gb-container gb-container-fe72985d">
-                                    <div class="gb-inside-container"></div>
-                                 </div>
-                           </div>
-
-                           <div class="gb-grid-column gb-grid-column-34fb67fb">
-                                 <div class="gb-container gb-container-34fb67fb">
-                                    <div class="gb-inside-container">
-                                       <h2 class="gb-headline gb-headline-90c84c3a">330</h2>
-
-
-
-                                       <h2 class="gb-headline gb-headline-c96e550c">Poor Environmental Performance</h2>
-                                    </div>
-                                 </div>
-                           </div>
-
-                           <div class="gb-grid-column gb-grid-column-12f58e34">
-                                 <div class="gb-container gb-container-12f58e34">
-                                    <div class="gb-inside-container">
-                                       <h2 class="gb-headline gb-headline-46b7cf1b">165</h2>
-
-
-
-                                       <h2 class="gb-headline gb-headline-ff77cb36">Needs Improvement</h2>
-                                    </div>
-                                 </div>
-                           </div>
-
-                           <div class="gb-grid-column gb-grid-column-39cfbbb8">
-                                 <div class="gb-container gb-container-39cfbbb8">
-                                    <div class="gb-inside-container">
-                                       <h2 class="gb-headline gb-headline-0f99cdfd">0</h2>
-
-
-
-                                       <h2 class="gb-headline gb-headline-d7236770">Great Environmental Performance</h2>
-                                    </div>
-                                 </div>
-                           </div>
-
-                           <div class="gb-grid-column gb-grid-column-8ce327e6">
-                                 <div class="gb-container gb-container-8ce327e6">
-                                    <div class="gb-inside-container"></div>
-                                 </div>
-                           </div>
-                        </div>
-                     </div>
-               </div>
-
-               <p>Annually, Green Fins members have their environmental performance evaluated by trained assessors. Each
-                     assessment results in a score based on a traffic light rating system for how well risks to the environment
-                     are managed. The lower the score, the better the environmental performance. Each member’s score is
-                     confidential and continued membership is based on ongoing improvement.</p>
-
-               <div class="gb-container gb-container-e88999f6">
-                     <div class="gb-inside-container">
-                        <div class="gb-grid-wrapper gb-grid-wrapper-d80d1d7a">
-                           <div class="gb-grid-column gb-grid-column-e0f04d97">
-                                 <div class="gb-container gb-container-e0f04d97">
-                                    <div class="gb-inside-container">
-                                       <h2 class="gb-headline gb-headline-8040ba89">Active</h2>
-
-                                       <p>A member that has been assessed within the last 18 months and successfully reduced
-                                             their environmental impact.</p>
-                                    </div>
-                                 </div>
-                           </div>
-
-                           <div class="gb-grid-column gb-grid-column-f3d10a1f">
-                                 <div class="gb-container gb-container-f3d10a1f">
-                                    <div class="gb-inside-container">
-                                       <h2 class="gb-headline gb-headline-5a18dd14">Inactive</h2>
-
-                                       <p>A member who was previously active but has not had an assessment to verify their
-                                             environmental impact in the last 18 months.</p>
-                                    </div>
-                                 </div>
-                           </div>
-
-                           <div class="gb-grid-column gb-grid-column-db558dc6">
-                                 <div class="gb-container gb-container-db558dc6">
-                                    <div class="gb-inside-container">
-                                       <h2 class="gb-headline gb-headline-040888e5">Restricted</h2>
-
-                                       <p>A member that has not managed to reduce their threat to the marine environment or has
-                                             been involved in an activity that is seen as seriously detrimental to the marine
-                                             environment. Restricted members are not listed.</p>
-                                    </div>
-                                 </div>
-                           </div>
-                        </div>
-                     </div>
-               </div>
-            </div>
-         </div>
-         <div class="gb-container gb-container-19322339">
-            <div class="gb-inside-container"></div>
-         </div>
-
-      SCORE;
-
-      return $return;
-
-   } else {
-      
-      // Fetch members by country and location 
-      $args = array(
-         'posts_per_page'  => -1,
-         'post_type'    => 'wpsl_stores',
-         'post_status'  => array('publish', 'pending', 'draft'),
-         'order'        => 'ASC',
-         'meta_query'   => array(
-            'relation' => 'AND',
-            array(
-               'key'     => 'wpsl_country',
-               'value'   => $get_atts['country'],
-            ),
-            array(
-               'key'     => 'wpsl_city',
-               'value'   => $get_atts['location'],
-            ),
-            'membership_status' => array(
-               'key'     => 'wpsl_api_membership_status',
-               'value'   => array('active', 'inactive'),
-            ),
-         ),
-         'orderby' => array(
-            'membership_status' => 'ASC'
-         ),
-      );
-      $members = new WP_Query($args);
-
-      // Figure out what we are outputting
-
-      if (!$members->have_posts()) {
-         return __("<center>This location doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-website-members');
-      } else {
-         // We're going to return a grid container.
-
-         $return = "<div class=\"grid-container\">";
-
-         $i = 0;
-         // Loop over the returned members
-         foreach ($members->posts as $key => $member) {
-
-            // Not all listings have links
-            if ($member->wpsl_url === 'http://') { 
-               $clean_title = $member->post_title;
-               $clean_url = '';
-            }
-            else {
-               $clean_title = '<a target="_blank" href="' . $member->wpsl_url . '">' . $member->post_title .'</a>';
-               $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $member->wpsl_url ) ,"/");
-            }
-
-            $i++;
-            // Add a list item for each member to the string
-            $return .= gf_member_listing($member);
-
-            if (3 == $i) {
-               $i = 0;
-               $return .= <<<CLEARFIX
-                  <div class="clear"></div>
-               CLEARFIX;
-            }
-         }
-
-         // Close the div
-         $return .= "</div>";
-      }
-      
-   }
-
-   return $return;
-}
-
-
 
 
 
@@ -1494,7 +1179,6 @@ function rwf_gf_members_api_plugin_options()
       // Used throughout the find-a-member pages
       add_shortcode("list_top10members", "list_top10members_func");
       add_shortcode("list_top5bycountry", "list_top5bycountry_func");
-      add_shortcode("list_membersbylocation", "list_membersbylocation_func"); //depreciated
       add_shortcode("list_membersby", "list_membersby_func");
       add_shortcode("list_digitalmembers", "list_digitalmembers_func");
       add_shortcode("single_verify_membership", "single_verify_membership_func");
