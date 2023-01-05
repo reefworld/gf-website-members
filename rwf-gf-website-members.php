@@ -359,7 +359,12 @@ function list_membersby_func($atts = [])
 
          // using location as keys, if key is not set yet then create an array for it.
          if(!isset($locations[$qmember->wpsl_city])) {
-            $locations[$qmember->wpsl_city] = array();
+            $locations[$qmember->wpsl_city] = array(
+               'name' => $qmember->wpsl_city,
+               'slug' => sanitize_title($qmember->wpsl_city),
+               'members' => array()
+            );
+            
          }
 
          switch ($qmember->wpsl_api_membership_level) {
@@ -377,25 +382,31 @@ function list_membersby_func($atts = [])
          }
 
          // add the member under that location
-         $locations[$qmember->wpsl_city][] = $qmember;
+         $locations[$qmember->wpsl_city]['members'][] = $qmember;
       }
 
       // uncomment to sort the locations alphabetically - for now I like that active locations float to the top
       //ksort($locations);
 
-      // We're going to return a country
-      $return = "";
+      // We're going to return a country listing
+      $return = '<ul class="country-toc">';
+
+      foreach ($locations as $location) {
+         $return .= '<li><a href="#' . $location["slug"] . '">' . $location["name"] . '</a></li>';
+      }
+
+      $return .= '</ul>';
 
       foreach ($locations as $location) {
 
-         $return .= '<h2 class="gb-headline gb-headline-text" id="' . sanitize_title($location[0]->wpsl_city) . '">' . $location[0]->wpsl_city . '</h2>';
+         $return .= '<h2 class="gb-headline gb-headline-text" id="' . $location["slug"] . '">' . $location["name"] . '</h2>';
 
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
 
          $i = 0;
          // Loop over the returned members
-         foreach ($location as $key => $member) {
+         foreach ($location['members'] as $key => $member) {
             $return .= gf_member_listing($member);
 
             $i++;
