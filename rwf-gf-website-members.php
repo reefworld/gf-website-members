@@ -351,21 +351,12 @@ function list_membersby_func($atts = [])
       return __("<center>This country doesn't have any active or inactive members to display just yet – please check back soon.</center><br><br>", 'rwf-gf-website-members');
    } else {
       
-      // build a distinct list of locations from the returned members
+      // build a distinct list of locations from the returned active members
       $locations = [];
+      $inactive_members = [];
 
       // loop through members and restructure by location
       foreach($members_query->posts as $key => $qmember) {
-
-         // using location as keys, if key is not set yet then create an array for it.
-         if(!isset($locations[$qmember->wpsl_city])) {
-            $locations[$qmember->wpsl_city] = array(
-               'name' => $qmember->wpsl_city,
-               'slug' => sanitize_title($qmember->wpsl_city),
-               'members' => array()
-            );
-            
-         }
 
          switch ($qmember->wpsl_api_membership_level) {
             case "3":
@@ -381,8 +372,21 @@ function list_membersby_func($atts = [])
                $qmember->wpsl_api_membership_level = "none";
          }
 
-         // add the member under that location
-         $locations[$qmember->wpsl_city]['members'][] = $qmember;
+         if($qmember->wpsl_api_membership_status == "active"){
+            // using location as keys, if key is not set yet then create an array for it.
+            if(!isset($locations[$qmember->wpsl_city])) {
+               $locations[$qmember->wpsl_city] = array(
+                  'name' => $qmember->wpsl_city,
+                  'slug' => sanitize_title($qmember->wpsl_city),
+                  'members' => array()
+               );
+               
+            }
+            // add the member under that location
+            $locations[$qmember->wpsl_city]['members'][] = $qmember;
+         } else {
+            $inactive_members[] = $qmember;
+         }
       }
 
       // uncomment to sort the locations alphabetically - for now I like that active locations float to the top
@@ -423,6 +427,29 @@ function list_membersby_func($atts = [])
 
       }
 
+      if ($inactive_members) {
+         $return .= '<h2 class="gb-headline gb-headline-text" id="inactive-members">Inactive Members</h2>';
+
+         // We're going to return a grid container
+         $return .= '<div class="grid-container">';
+   
+         $i = 0;
+         // Loop over the returned members
+         foreach ($inactive_members as $key => $member) {
+            $return .= gf_member_listing($member);
+   
+            $i++;
+            if (3 == $i) {
+               $i = 0;
+               $return .= <<<CLEARFIX
+                  <div class="clear"></div>
+               CLEARFIX;
+            }
+         }
+   
+         // Close the grid container
+         $return .= "</div>";
+      }
    }
 
    return $return;
