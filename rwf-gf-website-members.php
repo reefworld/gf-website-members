@@ -393,10 +393,10 @@ function list_membersby_func($atts = [])
       //ksort($locations);
 
       // We're going to return a country listing
-      $return = '<div class="country-toc gb-button-wrapper gb-button-wrapper-cta-orange">';
+      $return = '<div class="country-toc gb-button-wrapper gb-button-wrapper-cta-blue">';
 
       foreach ($locations as $location) {
-         $return .= '<a class="gb-button gb-button-text gb-button-cta-orange" href="#' . $location["slug"] . '">' . $location["name"] . '</a>';
+         $return .= '<a class="gb-button gb-button-text gb-button-cta-blue" href="#' . $location["slug"] . '">' . $location["name"] . '</a>';
       }
 
       $return .= '</div>';
