@@ -429,6 +429,7 @@ function list_membersby_func($atts = [])
 
       if ($inactive_members) {
          $return .= '<h2 class="gb-headline gb-headline-text" id="inactive-members">Inactive Members</h2>';
+         $return .= '<p class="has-text-align-center">These members were previously active but have not had a Green Fins assessment or self-evaluation to verify their environmental impact in the last 12 months. An inactive status does not mean they are not operational or that they are not following environmental standards.</p>';
 
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
