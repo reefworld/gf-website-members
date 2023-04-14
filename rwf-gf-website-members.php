@@ -1,9 +1,9 @@
 <?php
 /*
-Plugin Name: Display Green Fins members from Assessor Portal API
+Plugin Name: Active, Inactive & Restricted Green Fins member listing and verification (Hub API)
 Plugin URI: https://reef-world.org
-Description: Display Green Fins member information within maps, pages and posts from the Members API. Requires WP Store Locator v2.2.233 or later.
-Version: 3.7
+Description: Display Green Fins member info on maps, pages and posts sourced from Green Fins Hub API. Requires WP Store Locator v2.2.236 or later.
+Version: 2023.1
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -23,7 +23,17 @@ function single_verify_membership_func()
    if(isset( $_GET['member'] )){
       $url_member = sanitize_text_field( $_GET['member'] );
    } else {
-      return '<center><p style="color:red"><strong>Invalid QR – please scan the membership certificate again</strong></p></center>';
+
+      $invalid = <<<INVALID
+         <div class="grid-100 tablet-grid-100 mobile-grid-100">
+            <section class="gf-operation-listing gf-member-restricted">
+            <h3>Missing QR Code</h3>
+            <strong>Please scan the QR code for the operation that you would like to verify – this is usually found on their membership certificate.</strong>
+            </section>
+         </div>
+      INVALID;
+
+      return $invalid;
    }
 
    // Fetch members by country and location 
@@ -51,10 +61,12 @@ function single_verify_membership_func()
    if (!$members_query->have_posts()) {
 
       $error = <<<ERROR
-         <h3>Error: No data for this Green Fins Member</h3>
          <div class="grid-100 tablet-grid-100 mobile-grid-100">
             <section class="gf-operation-listing gf-member-restricted">
-               <p><strong>This feature currently only works for Green Fins Digital Members</strong> – verifying Green Fins Certified Members is planned for end of Q4 2022 but may slip to Q1 2023 (depending on the rollout of Green Fins Hub in each active country). <br><br>An announcement will be made on social media when the feature is ready. Please check back soon!</p>
+            <h3>No data for this Green Fins Member</h3>
+               <p><strong>Digital membership:</strong> You need to complete the self-evaluation and agree to your action plan in <a href="https://hub.greenfins.net/">Green Fins Hub</a>.</p>
+                  <br>
+               <p><strong>Certified membership:</strong> Your most recent assessment needs to be reviewed by the <a href="https://greenfins.net/contact/#national-teams">national team in your country</a>.</p>
             </section>
          </div>
       ERROR;
@@ -119,20 +131,6 @@ function list_top10members_func()
    foreach ($top_10_members->posts as $key => $top_10_member) {
       $i++;
       $n++;
-
-      switch ($top_10_member->wpsl_api_membership_level) {
-         case "3":
-            $top_10_member->wpsl_api_membership_level = "bronze";
-             break;
-         case "2":
-            $top_10_member->wpsl_api_membership_level = "silver";
-             break;
-         case "1":
-            $top_10_member->wpsl_api_membership_level = "gold";
-             break;
-         default:
-            $top_10_member->wpsl_api_membership_level = "none";
-      }
 
       // Add a list item for each member to the string
       $return .= gf_member_listing($top_10_member);
@@ -232,29 +230,42 @@ function list_digitalmembers_func($atts = [])
       // loop through members and restructure by location
       foreach($members_query->posts as $key => $qmember) {
 
-         // using location as keys, if key is not set yet then create an array for it.
-         if(!isset($locations[$qmember->wpsl_country])) $locations[$qmember->wpsl_country] = array();
 
-         // add the member under that location
-         $locations[$qmember->wpsl_country][] = $qmember;
+            // using location as keys, if key is not set yet then create an array for it.
+            if(!isset($locations[$qmember->wpsl_country])) {
+               $locations[$qmember->wpsl_country] = array(
+                  'name' => $qmember->wpsl_country,
+                  'slug' => sanitize_title($qmember->wpsl_country),
+                  'members' => array()
+               );
+               
+            }
+            // add the member under that location
+            $locations[$qmember->wpsl_country]['members'][] = $qmember;
       }
 
       // uncomment to sort the locations alphabetically - for now I like that active locations float to the top
       ksort($locations);
 
-      // We're going to return a country
-      $return = "";
+      // We're going to return a listing
+      $return = '<div class="country-toc gb-button-wrapper gb-button-wrapper-cta-blue">';
+
+      foreach ($locations as $location) {
+         $return .= '<a class="gb-button gb-button-text gb-button-cta-blue" href="#' . $location["slug"] . '">' . $location["name"] . '</a>';
+      }
+
+      $return .= '</div>';
 
       foreach ($locations as $location) {
 
-         $return .= '<h2 class="gb-headline gb-headline-text" id="' . sanitize_title($location[0]->wpsl_country) . '">' . $location[0]->wpsl_country . '</h2>';
+         $return .= '<h2 class="gb-headline gb-headline-text" id="' . $location["slug"] . '">' . $location["name"] . '</h2>';
 
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
 
          $i = 0;
          // Loop over the returned members
-         foreach ($location as $key => $member) {
+         foreach ($location['members'] as $key => $member) {
             $return .= gf_member_listing($member);
 
             $i++;
@@ -357,20 +368,6 @@ function list_membersby_func($atts = [])
 
       // loop through members and restructure by location
       foreach($members_query->posts as $key => $qmember) {
-
-         switch ($qmember->wpsl_api_membership_level) {
-            case "3":
-               $qmember->wpsl_api_membership_level = "bronze";
-                break;
-            case "2":
-               $qmember->wpsl_api_membership_level = "silver";
-                break;
-            case "1":
-               $qmember->wpsl_api_membership_level = "gold";
-                break;
-            default:
-               $qmember->wpsl_api_membership_level = "none";
-         }
 
          if($qmember->wpsl_api_membership_status == "active"){
             // using location as keys, if key is not set yet then create an array for it.
@@ -490,10 +487,28 @@ function gf_member_listing($member, $percent = 33)
       $clean_url = rtrim( str_replace( array( 'http://', 'https://', 'www.' ), array( '', '', '' ), $url ) ,"/");
    }
    
+   switch ($member->wpsl_api_membership_level) {
+      case "3":
+         $member->wpsl_api_membership_level = "bronze";
+          break;
+      case "2":
+         $member->wpsl_api_membership_level = "silver";
+          break;
+      case "1":
+         $member->wpsl_api_membership_level = "gold";
+          break;
+      case "restricted":
+          break;
+      default:
+         $member->wpsl_api_membership_level = "none";
+   }
+
    // fixing the tags that are output on the member listings
    switch ($member->wpsl_api_membership_status) {
       case "active":
-         if($member->wpsl_api_membership_type == "digital"){
+         if ($member->wpsl_api_membership_level == "restricted"){
+            $type_level_status = "restricted";
+         } else if($member->wpsl_api_membership_type == "digital"){
             $type_level_status = "digital";
             $gf_stamp = '<a target=_blank" href="/about-green-fins/#digital-membership" alt="Green Fins membership stamp" title="Digital Members self-manage their sustainability journey."><img class="stamp" src="/wp-content/gf-stamps/gf_stamp_digital.png"></a>';
          } else {
@@ -552,15 +567,15 @@ function gf_member_listing($member, $percent = 33)
 
 
 /**
- * Populate Green Fins Digital Members into posts and post meta
+ * Populate Green Fins Members into posts and post meta
  *
  *
  */
-function rwf_gf_digital_members_as_posts_func()
+function rwf_gf_fetch_members_as_posts_func()
 {
    // For logging output (including timing how long it takes to execute)
    $start_microtime = microtime(true);
-   $trace_id = uniqid('dmapf:');
+   $trace_id = uniqid('id:');
    $member_record_created_count = 0;
    $member_record_updated_count = 0;
    $member_logo_updated_count = 0;
@@ -572,7 +587,7 @@ function rwf_gf_digital_members_as_posts_func()
          'headers' => array(
              'Authorization' => get_option('rwf_hub_key')
          )
-     );
+      );
 
       $response = wp_remote_get(esc_url_raw(get_option('rwf_hub_endpoint') . $url), $args);
       // Handle the case when something has been misconfigured
@@ -598,7 +613,7 @@ function rwf_gf_digital_members_as_posts_func()
       return $api_response;
    }
 
-   $url = '/operations?type=DIGITAL';
+   $url = '/operations';
    $members = rwf_hub_fetch('members list', $url, $trace_id);
 
    // We've built the members list, time to make some posts
@@ -638,7 +653,7 @@ function rwf_gf_digital_members_as_posts_func()
             'post_type'    => 'wpsl_stores',
             'post_status'  => $post_status,
             'post_title'   => $member['name'],
-            'post_content' => "This record is maintained in the Green Fins Hub, to edit it please visit https://hub.greenfins.net"
+            'post_content' => "This record is maintained in Green Fins Hub, to edit it please visit https://hub.greenfins.net"
          );
          $member_record_updated_count++;
       } else {
@@ -647,7 +662,7 @@ function rwf_gf_digital_members_as_posts_func()
             'post_type'    => 'wpsl_stores',
             'post_status'  => $post_status,
             'post_title'   => $member['name'],
-            'post_content' => "This record is maintained in the Green Fins Hub, to edit it please visit https://hub.greenfins.net"
+            'post_content' => "This record is maintained in Green Fins Hub, to edit it please visit https://hub.greenfins.net"
          );
          $member_record_created_count++;
       }
@@ -657,28 +672,51 @@ function rwf_gf_digital_members_as_posts_func()
       if ($post_id) {
          // Add or update the post meta with the member's info and fetch a local copy of the logo
          
-         switch ($member['membership_level']) {
-            case "Certified Bronze Member":
-               $member['membership_level'] = "3";
-               $term_id = array( 417 ); //overwrite with certified-bronze-member
-                break;
-            case "Certified Silver Member":
-               $member['membership_level'] = "2";
-               $term_id = array( 416 ); //overwrite with certified-silver-member
-                break;
-            case "Certified Gold Member":
-               $member['membership_level'] = "1";
-               $term_id = array( 415 ); //overwrite with certified-gold-member
-                break;
-            default:
-               $member['membership_level'] = "none";
-               $term_id = array(); //unset inactive certified memebrs
-         }
-
          if ($member['membership_type'] == "DIGITAL" && $member['membership_status'] == 'ACTIVE') {
-            $term_id = array( 414 ); //digital-member
+            $term_id = array( 414 ); //overwrite category with digital-member
+
+         } else if ($member['membership_type'] == "CERTIFIED" && $member['membership_status'] == 'ACTIVE') {
+
+            switch ($member['membership_level']) {
+               case "Certified Bronze Member":
+                  $member['membership_level'] = "3";
+                  $term_id = array( 417 ); //overwrite category with certified-bronze-member
+                   break;
+               case "Certified Silver Member":
+                  $member['membership_level'] = "2";
+                  $term_id = array( 416 ); //overwrite category with certified-silver-member
+                   break;
+               case "Certified Gold Member":
+                  $member['membership_level'] = "1";
+                  $term_id = array( 415 ); //overwrite category with certified-gold-member
+                   break;
+               case "Restricted":
+                  $member['membership_level'] = "restricted";
+                  $term_id = array( 445 ); ////overwrite category with restricted
+                   break;
+               default:
+                  $member['membership_level'] = "none";
+                  $term_id = array(); //unset category
+            }
+
          } else {
-            $term_id = array(); //unset inactive digital memebrs
+            $term_id = array(); //unset category for inactive memebrs
+            switch ($member['membership_level']) {
+               case "Certified Bronze Member":
+                  $member['membership_level'] = "3";
+                   break;
+               case "Certified Silver Member":
+                  $member['membership_level'] = "2";
+                   break;
+               case "Certified Gold Member":
+                  $member['membership_level'] = "1";
+                   break;
+               case "Restricted":
+                  $member['membership_level'] = "restricted";
+                   break;
+               default:
+                  $member['membership_level'] = "none";
+            }
          }
 
          // Set file destination.
@@ -732,6 +770,7 @@ function rwf_gf_digital_members_as_posts_func()
       }
    }
 
+
    // Tidy up archived operations, if they have been archived at source the post date will be in the past
    $args = array(
       'post_type' => 'wpsl_stores',
@@ -739,7 +778,7 @@ function rwf_gf_digital_members_as_posts_func()
       'posts_per_page' => -1,
       'date_query' => array(
          'before' => date('Y-m-d', strtotime('-1 hour')) // if only a date was passed in it would be converted to 00:00:00 on that date – adding a time ensures the date is inclusive
-     )
+      )
    );
    $archived_members_exist = get_posts($args);
 
@@ -748,6 +787,7 @@ function rwf_gf_digital_members_as_posts_func()
          wp_trash_post( $member->ID );
       }
    }
+   
 
    if (WP_CONTENT_URL == "https://greenfins.net/wp-content") {
       // We are on production so send heartbeat for status.reef-world.org
@@ -758,211 +798,6 @@ function rwf_gf_digital_members_as_posts_func()
    exit;
 }
 
-
-
-
-
-
-
-
-
-/**
- * Populate Green Fins Certified Members into posts and post meta, the tricky bit is updating the existing records after building an array.
- *
- * Love this
- */
-function rwf_gf_certified_members_as_posts_func()
-{
-   // For logging output (including timing how long it takes to execute)
-   $start_microtime = microtime(true);
-   $trace_id = uniqid('cmapf:');
-   $member_record_created_count = 0;
-   $member_record_updated_count = 0;
-   $member_logo_updated_count = 0;
-   rwf_write_log("[" . $trace_id . "] started, please wait");
-
-   function rwf_portal_fetch($description, $url, $trace_id)
-   {
-      $response = wp_remote_get(esc_url_raw(get_option('rwf_portal_endpoint') . $url));
-      // Handle the case when something has been misconfigured
-      if (is_wp_error($response)) {
-         rwf_write_log("[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $response->get_error_message() . ")");
-         exit;
-      }
-
-      $api_response = json_decode(wp_remote_retrieve_body($response), true);
-      // Handle the case when the call fails
-      if ($api_response["success"] == 0) {
-         rwf_write_log("[" . $trace_id . "] error – Unable to fetch the " . $description . " (error message: " . $api_response["error_message"] . ")");
-         exit;
-      }
-      return $api_response['data'];
-   }
-
-   // Declare empty arrays for use later
-   $members = [];
-
-   // Load the countries list
-   $url = '/countries?key=' . get_option('rwf_portal_key');
-   $countries = rwf_portal_fetch('countries list', $url, $trace_id);
-
-   foreach ($countries as $country) {
-      // Load the regions list
-      $url = '/countries/' . $country['id'] . '/regions?key=' . get_option('rwf_portal_key');
-      $regionsbycountry = rwf_portal_fetch('regions list for ' . $country['guid'], $url, $trace_id);
-
-      foreach ($regionsbycountry as $region) {
-         // Load the locations list
-         $url = '/regions/' . $region['id'] . '/locations?key=' . get_option('rwf_portal_key');
-         $locationsbyregion = rwf_portal_fetch('locations list for ' . $region['guid'], $url, $trace_id);
-
-         foreach ($locationsbyregion as $location) {
-            // Persist the location averages as transients so that the average score for each location can be used in other functions (we don't have a good way to store this in WPSL)
-            $transient_name = 'rwf_get_averagescore_' . $country['name'] . "_" . $location['name'];
-            set_transient($transient_name, $location['average'], MONTH_IN_SECONDS);
-
-            // Load the members list
-            $url = '/locations/' . $location['id'] . '/members?key=' . get_option('rwf_portal_key');
-            $membersbylocation = rwf_portal_fetch('members list for ' . $location['guid'], $url, $trace_id);
-
-            // Append the new locations onto any existing to build the array with each loop
-            $members = array_merge($members, $membersbylocation);
-         }
-      }
-   }
-
-   // We've built the members list, time to make some posts
-   // Try to disable the time limit to prevent timeouts.
-   @set_time_limit(0);
-
-   // Include dependencies - we are looping and running outside the context of /wp-admin/ 
-   require_once(ABSPATH . 'wp-admin/includes/file.php');
-   $member_logo_filepath = ABSPATH . 'wp-content/gf-member-logos/';
-   $existing_member_logos = scandir($member_logo_filepath);
-
-   // Seed the database
-   foreach ($members as $member) {
-
-      // Look for existing centre records
-      $args = array(
-         'post_type' => 'wpsl_stores',
-         'meta_key' => 'wpsl_api_centre_id', // This meta key is created using the wpsl filter custom_meta_box_fields() below
-         'meta_value' => $member['id'],
-         'post_status' => 'any',
-         'posts_per_page' => -1
-      );
-      $wpsl_post_exists = get_posts($args);
-
-      // Make sure we set the correct post status.
-      if ($member['status'] == 'active') {
-         $post_status = 'publish';
-      } else {
-         $post_status = 'pending';
-      }
-
-      if ($wpsl_post_exists) {
-         // update the existing member record
-         $wpsl_post_id = $wpsl_post_exists[0]->ID;
-         $post = array(
-            'ID'           => $wpsl_post_id,
-            'post_type'    => 'wpsl_stores',
-            'post_status'  => $post_status,
-            'post_title'   => $member['name'],
-            'post_content' => "This record is maintained in the Green Fins Assessor Portal, to edit it please visit https://portal.greenfins.net"
-         );
-         $member_record_updated_count++;
-      } else {
-         // make a new post for the member
-         $post = array(
-            'post_type'    => 'wpsl_stores',
-            'post_status'  => $post_status,
-            'post_title'   => $member['name'],
-            'post_content' => "This record is maintained in the Green Fins Assessor Portal, to edit it please visit https://portal.greenfins.net"
-         );
-         $member_record_created_count++;
-      }
-
-      $post_id = wp_insert_post($post);
-
-      if ($post_id) {
-         // Add or update the post meta with the member's info and fetch a local copy of the logo
-
-         switch ($member['membership_level']) {
-            case "Certified Bronze Member":
-               $member['membership_level'] = "3";
-               $term_id = array( 417 ); //certified-bronze-member
-                break;
-            case "Certified Silver Member":
-               $member['membership_level'] = "2";
-               $term_id = array( 416 ); //certified-silver-member
-                break;
-            case "Certified Gold Member":
-               $member['membership_level'] = "1";
-               $term_id = array( 415 ); //certified-gold-member
-                break;
-            default:
-               $member['membership_level'] = "none";
-               $term_id = array();
-         }
-
-         // Set file destination.
-         $member_logo_basename = basename($member['logofilename']);
-
-         if (!in_array($member_logo_basename, $existing_member_logos)) { // also covers off default.jpg
-            // Not an existing image, so lets fetch it
-            $tmp_file = download_url($member['logofilename']);
-
-            // If error storing temporarily, return the error.
-            if (is_wp_error($tmp_file)) {
-               rwf_write_log("[" . $trace_id . "] error – Unable to download: " . $member['logofilename'] . " with error " . $tmp_file->get_error_message());
-            } else {
-               // Copy the file to the final destination and delete temporary file.
-               copy($tmp_file, $member_logo_filepath . $member_logo_basename);
-               $member_logo_updated_count++;
-            }
-            @unlink($tmp_file);
-         }
-
-         // Build the array for the store post meta
-         $postmetas = array(
-            'api_centre_id'         => $member['id'],
-            'api_logo_filename'     => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
-            'api_industry'          => $member['industry'],
-            'api_membership_type'   => strtolower("CERTIFIED"),
-            'api_membership_status' => $member['status'],
-            'api_membership_level'  => $member['membership_level'],
-            'api_latest_score'      => $member['latest_score'],
-            'address'               => $member['address1'],
-            'address2'              => $member['address2'],
-            'city'                  => $member['location_name'],
-            'state'                 => $member['region_name'],
-            'country'               => $member['country_name'],
-            'lat'                   => $member['lat'],
-            'lng'                   => $member['lng'],
-            'phone'                 => $member['telephone'],
-            'url'                   => $member['website'],
-            'email'                 => $member['email']
-         );
-
-         foreach ($postmetas as $meta => $value) {
-            if (isset($value) && !empty($value)) {
-               update_post_meta($post_id, 'wpsl_' . $meta, $value);
-            }
-         }
-
-         //set the wpsl_store_category for map display and filtering
-         wp_set_post_terms($post_id, $term_id, 'wpsl_store_category');
-      }
-   }
-
-   if (WP_CONTENT_URL == "https://greenfins.net/wp-content") {
-      // We are on production so send heartbeat for status.reef-world.org
-      wp_remote_head( get_option('rwf_heartbeat_key') );
-   }
-
-   rwf_write_log("[" . $trace_id . "] executed in " . (microtime(true) - $start_microtime) . " seconds (" . $member_record_created_count . " created, " . $member_record_updated_count . " updated, " . $member_logo_updated_count . " logo(s) updated)");
-   exit;
-}
 
 
 
@@ -1003,8 +838,8 @@ function rwf_gf_members_api_plugin_menu_func()
 {
    add_submenu_page(
       "options-general.php",                    // Which menu parent
-      "Green Fins Members API Plugin Settings",    // Page title
-      "Green Fins Members API",                    // Menu title
+      "Green Fins Members via Hub API Plugin Settings",    // Page title
+      "Green Fins Hub API",                    // Menu title
       "gf_trigger_api",                            // Minimum capability (manage_options is an easy way to target administrators)
       "rwf_gf_members_api_plugin",                 // Menu slug
       "rwf_gf_members_api_plugin_options"          // Callback that prints the markup
@@ -1034,13 +869,13 @@ function rwf_gf_members_api_plugin_options()
 
       <input type="hidden" name="action" value="update_rwf_gf_members_api_plugin_settings" />
 
-      <h1><?php _e("Green Fins Members API Plugin", "rwf-gf-website-members"); ?></h1>
+      <h1><?php _e("Green Fins Members via Hub API Plugin Settings", "rwf-gf-website-members"); ?></h1>
 
       <p>
          This plugin displays Green Fins member information within maps, on pages and posts (using shortcodes).
       </p>
       <p>
-         Data is fetched from the Green Fins Assessor Portal via the Members API and stored in WP Store Locator (requires v2.2.233 or later). Average score information is cached using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_get_"; ?>" target="_new">transients</a> (enable WP Transients Manager for this link to work).
+         Data is fetched sourced from Green Fins Hub API and stored in WP Store Locator (requires WP Store Locator v2.2.236 or later). API fetch status is cached using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_"; ?>" target="_new">transients</a> (enable WP Transients Manager for this link to work).
       </p>
       <p>
          <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
@@ -1053,11 +888,6 @@ function rwf_gf_members_api_plugin_options()
          <li><code>[list_membersby country=""]</code> displays the active and inactive members for the specified country grouped by location.</li>
          <li><code>[list_membersby industry="liveaboard"]</code> displays the active and inactive members for the specified industry grouped by location.</li>
          <li><code>[list_digitalmembers]</code> displays the active and inactive digital members grouped by location.</li>
-         
-<!--
-         <li><code>[list_membersbylocation country="" location=""]</code> displays the active and inactive members for the specified country and location.</li>
-         <li><code>[list_membersbylocation country="" location="" display_average_score="true"]</code> displays the average score meter section for the specified country and location.</li>
--->
       </ul>
       </p>
 
@@ -1066,22 +896,6 @@ function rwf_gf_members_api_plugin_options()
       <h2><?php _e("Plugin Settings", "rwf-gf-website-members"); ?></h2>
 
       <table class="form-table" role="presentation">
-         <tr>
-            <th scope="row"><label>
-                  <?php _e("Portal Endpoint:", "rwf-gf-website-members"); ?></label>
-            </th>
-            <td>
-               <input class="" type="text" name="rwf_portal_endpoint" value="<?php echo get_option('rwf_portal_endpoint'); ?>" />
-            </td>
-         </tr>
-         <tr>
-            <th scope="row"><label>
-                  <label><?php _e("Portal Key:", "rwf-gf-website-members"); ?></label>
-            </th>
-            <td>
-               <input class="" type="text" name="rwf_portal_key" value="<?php echo get_option('rwf_portal_key'); ?>" />
-            </td>
-         </tr>
          <tr>
             <th scope="row"><label>
                   <?php _e("Hub Endpoint:", "rwf-gf-website-members"); ?></label>
@@ -1118,26 +932,11 @@ function rwf_gf_members_api_plugin_options()
 
    <h1>Trigger</h2>
       <p>The refresh function is configured to run hourly – if needed the script may be manually triggered below. <span style="color:red">Please refresh the log immediately after a manual trigger and wait at least 5 minutes before triggering again.</span></p>
-      <div style="border: 1px solid #ccc; padding: 0 20px; width: 90%;">
-         <p>Next <strong>Portal</strong> refresh is scheduled for: 
-            <strong>
-               <?php
-                  $var = wp_get_scheduled_event("admin_post_trigger_rwf_gf_certified_members_as_posts");               
-                  if(!empty($var)) {
-                     echo date('Y-m-d H:i:s', $var->timestamp) . ' UTC';
-                  } else {
-                     echo "Not scheduled, please investigate";
-                  }
-               ?>
-            </strong>
-         </p>
-         <p>Manual refresh: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_certified_members_as_posts">rwf_gf_certified_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> ) </p>
-      </div>
       <div style="margin-top: 15px; border: 1px solid #ccc; padding: 0 20px; width: 90%;">
          <p>Next <strong>Hub</strong> refresh is scheduled for: 
             <strong>
                <?php
-               $var = wp_get_scheduled_event("admin_post_trigger_rwf_gf_digital_members_as_posts");               
+               $var = wp_get_scheduled_event("admin_post_trigger_rwf_gf_fetch_members_as_posts");               
                if(!empty($var)) {
                   echo date('Y-m-d H:i:s', $var->timestamp) . ' UTC';
                } else {
@@ -1146,7 +945,7 @@ function rwf_gf_members_api_plugin_options()
                ?>
             </strong>
          </p>
-         <p>Manual refresh: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_digital_members_as_posts">rwf_gf_digital_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> ) </p>
+         <p>Manual refresh: <a href="/wp-admin/admin-post.php?action=trigger_rwf_gf_fetch_members_as_posts">rwf_gf_fetch_members_as_posts_func()</a> ( <a href="javascript:window.location.reload();">refresh log</a> ) </p>
       </div>
       <p>(server time: <strong><?php echo date('H:i:s'); ?> UTC</strong>)</p>
       <h1>Debug Log</h2>
@@ -1164,9 +963,6 @@ function rwf_gf_members_api_plugin_options()
    function rwf_gf_members_api_plugin_handle_save()
    {
       // Get the options that were sent
-      $portal_key = (!empty($_POST["rwf_portal_key"])) ? $_POST["rwf_portal_key"] : NULL;
-      $portal_endpoint = (!empty($_POST["rwf_portal_endpoint"])) ? $_POST["rwf_portal_endpoint"] : NULL;
-
       $hub_key = (!empty($_POST["rwf_hub_key"])) ? $_POST["rwf_hub_key"] : NULL;
       $hub_endpoint = (!empty($_POST["rwf_hub_endpoint"])) ? $_POST["rwf_hub_endpoint"] : NULL;
 
@@ -1175,8 +971,6 @@ function rwf_gf_members_api_plugin_options()
       // API Validation to go here
 
       // Update the values
-      update_option("rwf_portal_key", $portal_key, TRUE);
-      update_option("rwf_portal_endpoint", $portal_endpoint, TRUE);
       update_option("rwf_hub_key", $hub_key, TRUE);
       update_option("rwf_hub_endpoint", $hub_endpoint, TRUE);
       update_option("rwf_heartbeat_key", $heartbeat, TRUE);
@@ -1204,16 +998,12 @@ function rwf_gf_members_api_plugin_options()
    {
       add_action("admin_menu", "rwf_gf_members_api_plugin_menu_func");
       add_action('admin_post_update_rwf_gf_members_api_plugin_settings', 'rwf_gf_members_api_plugin_handle_save');
-      if (!wp_next_scheduled('admin_post_trigger_rwf_gf_certified_members_as_posts')) {
-         wp_schedule_event(time(), 'hourly', 'admin_post_trigger_rwf_gf_certified_members_as_posts');
-      }
-      if (!wp_next_scheduled('admin_post_trigger_rwf_gf_digital_members_as_posts')) {
-         wp_schedule_event(time(), 'hourly', 'admin_post_trigger_rwf_gf_digital_members_as_posts');
+      if (!wp_next_scheduled('admin_post_trigger_rwf_gf_fetch_members_as_posts')) {
+         wp_schedule_event(time(), 'hourly', 'admin_post_trigger_rwf_gf_fetch_members_as_posts');
       }
 
       // 'admin_post_' allows us to trigger the function from the admin area without needing WP Crontrol to be installed. 
-      add_action('admin_post_trigger_rwf_gf_certified_members_as_posts', 'rwf_gf_certified_members_as_posts_func');
-      add_action('admin_post_trigger_rwf_gf_digital_members_as_posts', 'rwf_gf_digital_members_as_posts_func');
+      add_action('admin_post_trigger_rwf_gf_fetch_members_as_posts', 'rwf_gf_fetch_members_as_posts_func');
 
       // Used throughout the find-a-member pages
       add_shortcode("list_top10members", "list_top10members_func");
