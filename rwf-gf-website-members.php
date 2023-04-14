@@ -701,6 +701,22 @@ function rwf_gf_fetch_members_as_posts_func()
 
          } else {
             $term_id = array(); //unset category for inactive memebrs
+            switch ($member['membership_level']) {
+               case "Certified Bronze Member":
+                  $member['membership_level'] = "3";
+                   break;
+               case "Certified Silver Member":
+                  $member['membership_level'] = "2";
+                   break;
+               case "Certified Gold Member":
+                  $member['membership_level'] = "1";
+                   break;
+               case "Restricted":
+                  $member['membership_level'] = "restricted";
+                   break;
+               default:
+                  $member['membership_level'] = "none";
+            }
          }
 
          // Set file destination.
