@@ -3,7 +3,7 @@
 Plugin Name: Active, Inactive & Restricted Green Fins member listing and verification (Hub API)
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member info on maps, pages and posts sourced from Green Fins Hub API. Requires WP Store Locator v2.2.236 or later.
-Version: 2023.3
+Version: 2023.4
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -97,7 +97,7 @@ function single_verify_membership_func()
 /**
  * List Top 10 Members
  *
- * Outputs a list of the top 10 members from the Portal API, cached for 4 hours using WP transients
+ * Outputs a list of the top 10 members
  */
 function list_top10members_func()
 {
@@ -159,7 +159,7 @@ function list_top10members_func()
 /**
  * List Top 5 Members by country
  *
- * Outputs a list of the top 5 members for a given country from the Portal API, cached for 4 hours using WP transients
+ * Outputs a list of the top 5 members for a given country
  */
 function list_top5bycountry_func($atts = [])
 {
@@ -190,7 +190,7 @@ function list_top5bycountry_func($atts = [])
 /**
  * List Digital Members
  *
- * Outputs a list of Green Fins Digital Members grouped by country and location
+ * Outputs a list of Green Fins operations grouped by country and location
  */
 function list_digitalmembers_func($atts = [])
 {
@@ -298,7 +298,7 @@ function list_digitalmembers_func($atts = [])
 /**
  * List Members by Country or industry
  *
- * Outputs a list of certified and digital Green Fins members – intended to be used for active countries
+ * Outputs a list of certified and digital Green Fins operations
  */
 function list_membersby_func($atts = [])
 {
@@ -868,7 +868,7 @@ function rwf_gf_members_api_plugin_options()
          This plugin displays Green Fins member information within maps, on pages and posts (using shortcodes).
       </p>
       <p>
-         Data is fetched sourced from Green Fins Hub API and stored in WP Store Locator (requires WP Store Locator v2.2.236 or later). API fetch status is cached using <a href="<?php echo get_bloginfo("url") . "/wp-admin/tools.php?page=pw-transients-manager&s=rwf_"; ?>" target="_new">transients</a> (enable WP Transients Manager for this link to work).
+         Data is fetched sourced from Green Fins Hub API and stored in WP Store Locator (requires WP Store Locator v2.2.236 or later).
       </p>
       <p>
          <strong>For help with this plugin, please contact James Greenhalgh (james@reef-world.org)</strong>
@@ -877,7 +877,7 @@ function rwf_gf_members_api_plugin_options()
          Available shortcodes:
       <ul>
          <li><code>[list_top10members]</code> displays the Top 10 members</li>
-         <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li>
+         <!-- <li><code>[list_top5bycountry country=""]</code> displays the Top 5 members for the specified country.</li> -->
          <li><code>[list_membersby country=""]</code> displays the active and inactive members for the specified country grouped by location.</li>
          <li><code>[list_membersby industry="liveaboard"]</code> displays the active and inactive members for the specified industry grouped by location.</li>
          <li><code>[list_digitalmembers]</code> displays the active and inactive digital members grouped by location.</li>
