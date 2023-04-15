@@ -3,7 +3,7 @@
 Plugin Name: Active, Inactive & Restricted Green Fins member listing and verification (Hub API)
 Plugin URI: https://reef-world.org
 Description: Display Green Fins member info on maps, pages and posts sourced from Green Fins Hub API. Requires WP Store Locator v2.2.236 or later.
-Version: 2023.2
+Version: 2023.3
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -550,7 +550,6 @@ function gf_member_listing($member, $percent = 33)
                <p class="contact">Contact info:</p>
                   <p class="contact-item"><a target="_blank" href="$url">$clean_url</a></p>
                   <p class="contact-item"><a target="_blank" href="mailto:$member->wpsl_email?subject=I found you on the Green Fins website and would like more information">$member->wpsl_email</a></p>
-                  <p class="contact-item"><a target="_blank" href="tel:$member->wpsl_phone">$member->wpsl_phone</a></p>
             </section>
          </div>
       LISTING;
@@ -728,6 +727,9 @@ function rwf_gf_fetch_members_as_posts_func()
             @unlink($tmp_file);
          } 
 
+         if ($member['email'] == "hub+please-change-me@greenfins.net") { // email is a required field in Green Fins Hub and was missing on some migrated records
+            $member['email'] = "";
+         }
 
          // Build the array for the store post meta
          $postmetas = array(
