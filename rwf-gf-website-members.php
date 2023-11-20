@@ -731,6 +731,10 @@ function rwf_gf_fetch_members_as_posts_func()
             $member['email'] = "";
          }
 
+         if ($member['latest_score'] == "0") { // update_post_meta() doesn't support saving a 0 value
+            $member['latest_score'] = "0x0"; 
+         }
+
          // Build the array for the store post meta
          $postmetas = array(
             'api_centre_id'         => $member['id'],
