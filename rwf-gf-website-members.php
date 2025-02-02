@@ -2,8 +2,8 @@
 /*
 Plugin Name: Active, Inactive & Restricted Green Fins member listing and verification (Hub API)
 Plugin URI: https://reef-world.org
-Description: Display Green Fins member info on maps, pages and posts sourced from Green Fins Hub API. Requires WP Store Locator v2.2.236 or later.
-Version: 2023.5
+Description: Display Green Fins member info on maps, pages and posts sourced from Green Fins Hub API. Requires WP Store Locator v2.2.241 or later.
+Version: 2025.1
 Author: James Greenhalgh
 Author URI: https://jamesgreenblue.com
 License: GPLv3
@@ -77,7 +77,7 @@ function single_verify_membership_func()
 
       $return = "<h3>Green Fins Member found:</h3>";
       $return .= '<div class="grid-container">';
-      $return .= gf_member_listing($members_query->posts[0], 100);
+      $return .= gf_member_listing($members_query->posts[0], 1, true);
       $return .= "</div>";
 
       return $return;
@@ -127,10 +127,9 @@ function list_top10members_func()
 
    // Loop over the returned members
    $i = 0;
-   $n = 0;
+
    foreach ($top_10_members->posts as $key => $top_10_member) {
       $i++;
-      $n++;
 
       // Add a list item for each member to the string
       $return .= gf_member_listing($top_10_member);
@@ -263,10 +262,12 @@ function list_digitalmembers_func($atts = [])
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
 
+         $c = count($location['members']);
+
          $i = 0;
          // Loop over the returned members
          foreach ($location['members'] as $key => $member) {
-            $return .= gf_member_listing($member);
+            $return .= gf_member_listing($member, $c, true);
 
             $i++;
             if (3 == $i) {
@@ -405,10 +406,12 @@ function list_membersby_func($atts = [])
          // We're going to return a grid container
          $return .= '<div class="grid-container">';
 
+         $c = count($location['members']);
+         
          $i = 0;
          // Loop over the returned members
          foreach ($location['members'] as $key => $member) {
-            $return .= gf_member_listing($member);
+            $return .= gf_member_listing($member, $c);
 
             $i++;
             if (3 == $i) {
@@ -466,11 +469,12 @@ function list_membersby_func($atts = [])
  *
  * Outputs a member listing
  */
-function gf_member_listing($member, $percent = 33)
+function gf_member_listing($member, $count = 0, $show_eer = false)
 {
    $return = "";
    $gf_stamp ='';
    $gf_industry = '';
+   $gf_eer = '';
 
    $url = $member->wpsl_url;
    if (!preg_match("~^(?:f|ht)tps?://~i", $url)) {
@@ -530,10 +534,18 @@ function gf_member_listing($member, $percent = 33)
       $gf_industry = '<p class="tag industry ' . $member->wpsl_api_industry . '">'. $member->wpsl_api_industry . '</p>';
    }
 
+   if($show_eer == true && $member->wpsl_api_external_eco_recognition == "eligible") {
+      $gf_eer = '<a target="_blank" href="https://greenfins.net/external-eco-recognition"><p class="tag eer">Eligible for External Eco Recognition</p></a>';
+   }
+
+   if($count == 1) {
+      $push = 'push-33';
+   }
+
    // Add a list item for each member to the string
    $return .= <<<LISTING
-         <div class="grid-$percent tablet-grid-$percent mobile-grid-100">
-            <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level">
+         <div class="$push grid-33 tablet-grid-33 mobile-grid-100">
+            <section class="gf-operation-listing gf-member-$member->wpsl_api_membership_status gf-member-$member->wpsl_api_membership_type gf-member-$member->wpsl_api_membership_level gf-member-eer-$member->wpsl_api_external_eco_recognition">
                <div class="logo-container">
                   <img class="logo" src="$member->wpsl_api_logo_filename">
                   $gf_stamp
@@ -543,8 +555,9 @@ function gf_member_listing($member, $percent = 33)
                   $clean_title
                </h2>
 
-               <p class="tag typelevelstatus">$type_level_status member</p>
+               <a target="_blank" href="https://greenfins.net/verify?member=$member->wpsl_api_centre_id"><p class="tag typelevelstatus">$type_level_status member</p></a>
                $gf_industry
+               $gf_eer
 
                <p>$member->wpsl_city, $member->wpsl_country</p>
                <p class="contact">Contact info:</p>
@@ -737,23 +750,24 @@ function rwf_gf_fetch_members_as_posts_func()
 
          // Build the array for the store post meta
          $postmetas = array(
-            'api_centre_id'         => $member['id'],
-            'api_logo_filename'     => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
-            'api_industry'          => $member['industry'],
-            'api_membership_type'   => strtolower($member['membership_type']),
-            'api_membership_status' => strtolower($member['membership_status']),
-            'api_membership_level'  => $member['membership_level'],
-            'api_latest_score'      => $member['latest_score'],
-            'address'               => $member['address'],
-            'address2'              => "",
-            'city'                  => $member["location"]["name"],
-            'state'                 => $member["region"]["name"],
-            'country'               => $member["country"]["name"],
-            'lat'                   => $member['lat'],
-            'lng'                   => $member['lng'],
-            'phone'                 => "",
-            'url'                   => $member['website'],
-            'email'                 => $member['email']
+            'api_centre_id'                     => $member['id'],
+            'api_logo_filename'                 => WP_CONTENT_URL . '/gf-member-logos/' . $member_logo_basename, //retrofitting local hosting of images, we used to hotlink from the Portal
+            'api_industry'                      => $member['industry'],
+            'api_membership_type'               => strtolower($member['membership_type']),
+            'api_membership_status'             => strtolower($member['membership_status']),
+            'api_membership_level'              => $member['membership_level'],
+            'api_latest_score'                  => $member['latest_score'],
+            'api_external_eco_recognition'      => $member['external_eco_recognition'] ? "eligible" : "not",
+            'address'                           => $member['address'],
+            'address2'                          => "",
+            'city'                              => $member["location"]["name"],
+            'state'                             => $member["region"]["name"],
+            'country'                           => $member["country"]["name"],
+            'lat'                               => $member['lat'],
+            'lng'                               => $member['lng'],
+            'phone'                             => "",
+            'url'                               => $member['website'],
+            'email'                             => $member['email']
          );
 
          foreach ($postmetas as $meta => $value) {
