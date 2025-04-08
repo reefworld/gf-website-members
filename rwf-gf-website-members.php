@@ -210,10 +210,15 @@ function list_digitalmembers_func($atts = [])
             'key'     => 'wpsl_api_membership_status',
             'value'   => array('active', 'inactive'),
          ),
+         'membership_level' => array(
+            'key'     => 'wpsl_api_membership_level',
+            'value'   => array('1', '2', '3', 'none'),
+         ),
       ),
       'orderby' => array(
          'membership_status' => 'ASC'
       ),
+      'fields' => 'ids', // Only fetch post IDs
    );
    $members_query = new WP_Query($args);
 
@@ -227,20 +232,22 @@ function list_digitalmembers_func($atts = [])
       $locations = [];
 
       // loop through members and restructure by location
-      foreach($members_query->posts as $key => $qmember) {
+      foreach($members_query->posts as $post_id) {
+            $country = get_post_meta($post_id, 'wpsl_country', true);
+            $member = get_post($post_id); // Fetch the post object to access other fields if needed
 
 
             // using location as keys, if key is not set yet then create an array for it.
-            if(!isset($locations[$qmember->wpsl_country])) {
-               $locations[$qmember->wpsl_country] = array(
-                  'name' => $qmember->wpsl_country,
-                  'slug' => sanitize_title($qmember->wpsl_country),
+            if(!isset($locations[$country])) {
+               $locations[$country] = array(
+                  'name' => $country,
+                  'slug' => sanitize_title($country),
                   'members' => array()
                );
                
             }
             // add the member under that location
-            $locations[$qmember->wpsl_country]['members'][] = $qmember;
+            $locations[$country]['members'][] = $member;
       }
 
       // uncomment to sort the locations alphabetically - for now I like that active locations float to the top
