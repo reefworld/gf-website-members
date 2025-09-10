@@ -1,7 +1,5 @@
 # Active, Inactive & Restricted Green Fins member listing and verification (Hub API)
 
-Plugin for the public Wordpress site to display Green Fins member info on maps, pages and posts sourced from Green Fins Hub API.
+Wordpress plugin to display Green Fins member information on maps, pages, and posts sourced from Green Fins Hub API.
 
-Requires WP Store Locator v2.2.236 or later.
-
-For help with this plugin, please contact James Greenhalgh MBCS (https://jamesgreenblue.com)
+For help adapting this plugin to suit your usecase, please open an issue.
